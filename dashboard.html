@@ -3,6 +3,8 @@
 <head>
     <title>Sparkx Dashboard</title>
     <link rel="stylesheet" href="style.css">
+    <!-- Links your app to the free global Supabase engine -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
 
@@ -15,52 +17,125 @@
         <a href="reports.html">📄 Reports</a>
         <a href="index.html">Logout</a>
     </div>
-
+      
     <h1>Sparkx Welding and Fabrications Bengaluru</h1>
-    <h2>Labour Management Dashboard</h2>
+    <h2>Management Dashboard (Cloud Real-Time Metrics)</h2>
 
-    <div class="login-box">
-        <h3 id="date"></h3>
-        <h3 id="clock"></h3>
-        <hr>
-        <h2>👷 Labour Summary</h2>
-        <div id="labourSummaryList"></div>
-        <hr>
-        <h2>Quick Actions</h2>
-        <button onclick="window.location.href='attendance.html'">Attendance</button>
-        <br><br>
-        <button onclick="window.location.href='salary.html'">Salary</button>
-        <br><br>
-        <button onclick="window.location.href='reports.html'">Reports</button>
+    <!-- Metrics Grid -->
+    <div style="display: flex; gap: 15px; margin-bottom: 25px; flex-wrap: wrap;">
+        <div style="flex: 1; min-width: 140px; background: #0d47a1; color: white; padding: 15px; border-radius: 8px; text-align: center;">
+            <h3 style="margin: 0; font-size: 14px; text-transform: uppercase; opacity: 0.9;">Total Workers</h3>
+            <p id="metricTotalWorkers" style="margin: 10px 0 0 0; font-size: 28px; font-weight: bold;">0</p>
+        </div>
+        <div style="flex: 1; min-width: 140px; background: #28a745; color: white; padding: 15px; border-radius: 8px; text-align: center;">
+            <h3 style="margin: 0; font-size: 14px; text-transform: uppercase; opacity: 0.9;">Present Today</h3>
+            <p id="metricPresentToday" style="margin: 10px 0 0 0; font-size: 28px; font-weight: bold;">0</p>
+        </div>
+        <div style="flex: 1; min-width: 140px; background: #dc3545; color: white; padding: 15px; border-radius: 8px; text-align: center;">
+            <h3 style="margin: 0; font-size: 14px; text-transform: uppercase; opacity: 0.9;">Month Total Advances</h3>
+            <p id="metricMonthAdvance" style="margin: 10px 0 0 0; font-size: 28px; font-weight: bold;">₹0</p>
+        </div>
+    </div>
+
+    <div class="login-box" style="max-width: 100%; box-sizing: border-box;">
+        <h3>Live Activity Feed (Recent Cloud Submissions)</h3>
+        <div id="activityFeedContainer">
+            <p style="color: gray; font-style: italic;">Connecting to cloud database streams...</p>
+        </div>
     </div>
 </div>
 
 <script>
-function showTime(){
-    let now = new Date();
-    document.getElementById("date").innerHTML = now.toDateString();
-    document.getElementById("clock").innerHTML = now.toLocaleTimeString();
-}
-setInterval(showTime,1000);
-showTime();
+// Cloud Database Connection Keys
+const SUPABASE_URL = "https://fjzqscohyteznkehiqnf.supabase.co"; 
+// ⚠️ Paste your long key from your settings screen between these quotes:
+const SUPABASE_KEY = "sb_publishable_ER-PXAe4A1vsLDYETL4BKw_G7p24kTE"; 
 
-// Automatically loads saved workers
-function loadDashboardSummary() {
-    const defaultLabour = [
-        { id: "1", name: "Javed", wage: 1300 },
-        { id: "2", name: "Arbaj", wage: 1000 }
-    ];
-    let labourList = JSON.parse(localStorage.getItem('labourList')) || defaultLabour;
-    const container = document.getElementById('labourSummaryList');
-    container.innerHTML = '';
+const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+window.onload = function() {
+    loadDashboardMetrics();
+};
+
+async function loadDashboardMetrics() {
+    const feedContainer = document.getElementById('activityFeedContainer');
     
-    labourList.forEach(worker => {
-        let p = document.createElement('p');
-        p.textContent = `${worker.name} - ₹${worker.wage}/day`;
-        container.appendChild(p);
+    // 1. Fetch total workers from the cloud list table
+    const { data: workers, error: workerErr } = await _supabase
+        .from('labour_list')
+        .select('id');
+        
+    if(!workerErr && workers) {
+        document.getElementById('metricTotalWorkers').textContent = workers.length;
+    }
+
+    // 2. Fetch all historical cloud logs to calculate dynamic figures
+    const { data: history, error: historyErr } = await _supabase
+        .from('attendance_history')
+        .select('*');
+
+    if (historyErr) {
+        feedContainer.innerHTML = `<p style="color: red;">Cloud Data Sync Interrupted: ${historyErr.message}</p>`;
+        return;
+    }
+
+    // Get cleanly formatted current date parameters
+    let today = new Date();
+    let todayStr = today.toLocaleDateString();
+    let currentMonth = today.getMonth() + 1;
+    let currentYear = today.getFullYear();
+
+    let presentTodayCount = 0;
+    let totalMonthlyAdvance = 0;
+
+    history.forEach(row => {
+        if (!row.date) return;
+        
+        let rowDate = new Date(row.date);
+        
+        // Count workers present today
+        if (row.date === todayStr && row.status === "Present") {
+            presentTodayCount++;
+        }
+        
+        // Accumulate this month's advances
+        if (rowDate.getMonth() + 1 === currentMonth && rowDate.getFullYear() === currentYear) {
+            totalMonthlyAdvance += parseFloat(row.advance) || 0;
+        }
+    });
+
+    // Update screen metric values
+    document.getElementById('metricPresentToday').textContent = presentTodayCount;
+    document.getElementById('metricMonthAdvance').textContent = "₹" + totalMonthlyAdvance;
+
+    // 3. Populate Recent Activity Stream (Latest 5 submissions first)
+    feedContainer.innerHTML = '';
+    if (!history || history.length === 0) {
+        feedContainer.innerHTML = '<p style="color: gray; font-style: italic;">Cloud data records are currently empty.</p>';
+        return;
+    }
+
+    // Sort to display newest modifications on top
+    let sortedHistory = history.sort((a, b) => b.created_at.localeCompare(a.created_at)).slice(0, 5);
+
+    sortedHistory.forEach(row => {
+        let logDiv = document.createElement('div');
+        logDiv.style.cssText = "padding: 10px; border-bottom: 1px solid #eee; font-size: 14px; line-height: 1.4;";
+        
+        let statusTag = row.status === "Present" 
+            ? `<span style="background: #e8f5e9; color: green; padding: 2px 6px; border-radius: 4px; font-weight: bold;">Present</span>`
+            : `<span style="background: #ffebee; color: red; padding: 2px 6px; border-radius: 4px; font-weight: bold;">Absent</span>`;
+
+        logDiv.innerHTML = `
+            <strong>${row.name}</strong> was marked ${statusTag} for date <strong>${row.date}</strong><br>
+            <small style="color: #666;">
+                ${row.status === 'Present' ? `Hours: ${row.intime} - ${row.outtime} | OT: ₹${row.otamount}` : 'No active duty logged'} 
+                ${row.advance > 0 ? `| <span style="color:#d32f2f; font-weight:bold;">Advance Paid: ₹${row.advance}</span>` : ''}
+            </small>
+        `;
+        feedContainer.appendChild(logDiv);
     });
 }
-loadDashboardSummary();
 </script>
 
 </body>
