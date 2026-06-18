@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+<title>Sparkx Attendance</title>
+<link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+<div class="container">
+
+<h1>Sparkx Welding and Fabrications Bengaluru</h1>
+
+<h2>Attendance Entry</h2>
+
+<div class="login-box">
+
+<h3 id="date"></h3>
+<h3 id="clock"></h3>
+
+<hr>
+
+<label>Select Labour</label>
+<br>
+
+<select>
+<option>Javed</option>
+<option>Arbaj</option>
+</select>
+
+<br><br>
+
+<label>Attendance</label>
+<br>
+
+<select>
+<option>Present</option>
+<option>Absent</option>
+</select>
+
+<br><br>
+
+<label>In Time</label>
+<br>
+
+<input type="time">
+
+<br><br>
+
+<label>Out Time</label>
+<br>
+
+<input type="time">
+
+<br><br>
+
+<label>OT Amount</label>
+<br>
+
+<input type="number" placeholder="₹">
+
+<br><br>
+
+<label>Advance</label>
+<br>
+
+<input type="number" placeholder="₹">
+
+<br><br>
+
+<button>SAVE ATTENDANCE</button>
+
+</div>
+
+</div>
+
+
+<script>
+
+function clock(){
+
+let now=new Date();
+
+document.getElementById("date").innerHTML=
+now.toDateString();
+
+document.getElementById("clock").innerHTML=
+now.toLocaleTimeString();
+
+}
+
+setInterval(clock,1000);
+
+clock();
+
+</script>
+
+
+</body>
+
+</html>
