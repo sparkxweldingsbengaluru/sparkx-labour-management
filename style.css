@@ -2,7 +2,7 @@ body {
     font-family: Arial, sans-serif;
     background: #f2f4f8;
     text-align: center;
-    margin-top: 80px;
+    margin-top: 40px; /* Adjusted slightly so the menu fits nicely on the screen */
 }
 
 h1 {
@@ -13,23 +13,41 @@ h2 {
     color: #333;
 }
 
+/* Container to keep everything centered and structured */
+.container {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 0 15px;
+}
+
+/* White data card component layout */
 .login-box {
     background: white;
-    width: 350px;
+    width: 380px; /* Widened slightly from 350px so text fields and labels sit comfortably */
     margin: 30px auto;
     padding: 25px;
     border-radius: 15px;
     box-shadow: 0px 5px 20px #ccc;
+    text-align: left; /* Changed to left-align so dynamic lists and input fields line up neatly */
 }
 
-input {
-    width: 250px;
+/* Keeps headers and break lines centered inside the white boxes */
+.login-box h2, .login-box h3, .login-box hr, .login-box p.center-text {
+    text-align: center;
+}
+
+/* Polished input and dropdown styling for standard data forms */
+input, select {
+    width: 100%;
     padding: 10px;
-    margin: 8px;
+    margin: 8px 0;
     border-radius: 8px;
     border: 1px solid #aaa;
+    box-sizing: border-box; /* Prevents long inputs from breaking outside the card border */
+    font-size: 14px;
 }
 
+/* Action buttons styling */
 button {
     background: #0d47a1;
     color: white;
@@ -37,21 +55,39 @@ button {
     border: none;
     border-radius: 8px;
     cursor: pointer;
+    font-weight: bold;
+    font-size: 14px;
+    width: 100%; /* Makes buttons full width inside forms for easy tapping */
+    box-sizing: border-box;
 }
+
+button:hover {
+    background: #0b3c8a; /* Subtle color change when hovering mouse over button */
+}
+
+/* Top Navigation Bar Component Layout */
 .menu {
     background: #0d47a1;
     padding: 15px;
     margin-bottom: 20px;
     border-radius: 10px;
+    text-align: center;
 }
 
 .menu a {
     color: white;
     text-decoration: none;
-    margin: 10px;
+    margin: 0 10px;
     font-weight: bold;
+    display: inline-block;
 }
 
 .menu a:hover {
     text-decoration: underline;
+}
+
+/* Utility layout helper for date/clock strings */
+#date, #clock {
+    margin: 5px 0;
+    color: #555;
 }
