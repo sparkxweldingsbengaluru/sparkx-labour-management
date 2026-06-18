@@ -21,13 +21,36 @@
     <h1>Sparkx Welding and Fabrications Bengaluru</h1>
     <h2>Salary & Payout Calculator (Cloud Database Sync)</h2>
 
-    <div class="login-box" style="max-width: 600px;">
-        <label style="font-weight: bold; color: #0d47a1;">Select Month for Calculations</label><br>
-        <input type="month" id="salaryMonth" onchange="calculateSalary()" style="font-weight: bold; font-size: 16px; border: 2px solid #0d47a1; padding: 5px;">
+    <!-- Option 1: Monthly View -->
+    <div class="login-box" style="max-width: 650px; margin-bottom: 25px;">
+        <label style="font-weight: bold; color: #0d47a1; font-size: 16px;">Option 1: View Complete Monthly Salary</label><br><br>
+        <input type="month" id="salaryMonth" onchange="calculateMonthlySalary()" style="font-weight: bold; font-size: 16px; border: 2px solid #0d47a1; padding: 5px;">
         <hr style="margin: 20px 0;">
 
         <div id="salaryTableContainer">
             <p style="color: gray; font-style: italic;">Select a month to pull attendance and calculate salaries...</p>
+        </div>
+    </div>
+
+    <!-- Option 2: Custom Date Range View -->
+    <div class="login-box" style="max-width: 650px;">
+        <label style="font-weight: bold; color: #28a745; font-size: 16px;">Option 2: View Custom Date Range Salary</label><br><br>
+        
+        <div style="display: flex; gap: 15px; flex-wrap: wrap;">
+            <div>
+                <label style="font-size: 13px; color: #555;">From Date:</label><br>
+                <input type="date" id="rangeStart" onchange="calculateRangeSalary()" style="font-weight: bold; padding: 5px; border: 2px solid #28a745;">
+            </div>
+            <div>
+                <label style="font-size: 13px; color: #555;">To Date:</label><br>
+                <input type="date" id="rangeEnd" onchange="calculateRangeSalary()" style="font-weight: bold; padding: 5px; border: 2px solid #28a745;">
+            </div>
+        </div>
+        
+        <hr style="margin: 20px 0;">
+
+        <div id="rangeSalaryTableContainer">
+            <p style="color: gray; font-style: italic;">Select both dates above to see custom window calculations...</p>
         </div>
     </div>
 </div>
@@ -45,70 +68,40 @@ window.onload = function() {
     let yyyy = today.getFullYear();
     let mm = String(today.getMonth() + 1).padStart(2, '0');
     document.getElementById('salaryMonth').value = `${yyyy}-${mm}`;
-    calculateSalary();
+    
+    // Default values for custom date pickers
+    let dd = String(today.getDate()).padStart(2, '0');
+    document.getElementById('rangeStart').value = `${yyyy}-${mm}-01`; // Start of current month
+    document.getElementById('rangeEnd').value = `${yyyy}-${mm}-${dd}`; // Today
+    
+    calculateMonthlySalary();
+    calculateRangeSalary();
 };
 
-// Local list of workers to define basic daily wage settings
 let labourList = JSON.parse(localStorage.getItem('labourList')) || [
     { id: "1", name: "Javed", wage: 1300 }, 
     { id: "2", name: "Arbaj", wage: 1000 }
 ];
 
-async function calculateSalary() {
-    const container = document.getElementById('salaryTableContainer');
-    const selectedMonthStr = document.getElementById('salaryMonth').value; // Format: "YYYY-MM"
-    
-    if (!selectedMonthStr) return;
-    
-    container.innerHTML = '<p style="color: gray; font-style: italic;">Fetching cloud records and compiling payout calculations...</p>';
-
-    // 1. Fetch ALL records from the cloud table
-    const { data: history, error } = await _supabase
-        .from('attendance_history')
-        .select('*');
-
-    if (error) {
-        container.innerHTML = `<p style="color: red;">Cloud Error: ${error.message}</p>`;
-        return;
-    }
-
-    // 2. Filter records down to just the selected month
-    // Matches dates saved in standard string formats containing "/MM/YYYY" or "M/D/YYYY"
-    const [year, month] = selectedMonthStr.split('-');
-    const parsedMonthInt = parseInt(month, 10);
-    const parsedYearInt = parseInt(year, 10);
-
-    const monthlyRecords = history.filter(record => {
-        if (!record.date) return false;
-        const d = new Date(record.date);
-        return d.getMonth() + 1 === parsedMonthInt && d.getFullYear() === parsedYearInt;
-    });
-
-    if (monthlyRecords.length === 0) {
-        container.innerHTML = '<p style="color: gray; font-style: italic;">No cloud attendance entries found for this month.</p>';
-        return;
-    }
-
-    // 3. Build HTML Table structure
+// Reusable engine to turn filtered records array into a beautiful clean data table layout
+function buildSalaryTable(filteredRecords) {
     let tableHtml = `
-        <table border="1" style="width:100%; border-collapse: collapse; text-align: left; margin-top: 10px;">
+        <table border="1" style="width:100%; border-collapse: collapse; text-align: left; margin-top: 10px; font-size: 14px;">
             <thead>
-                <tr style="background-color: #0d47a1; color: white;">
+                <tr style="background-color: #333; color: white;">
                     <th style="padding: 8px;">Worker Name</th>
                     <th style="padding: 8px;">Days Present</th>
                     <th style="padding: 8px;">Base Earned</th>
                     <th style="padding: 8px;">Total OT</th>
                     <th style="padding: 8px;">Total Adv</th>
-                    <th style="padding: 8px; color: #ffeb3b;">Net Payout</th>
+                    <th style="padding: 8px; background-color: #2e7d32;">Net Payout</th>
                 </tr>
             </thead>
             <tbody>
     `;
 
-    // 4. Calculate figures worker by worker
     labourList.forEach(worker => {
-        // Filter cloud entries belonging specifically to this single worker
-        const workerRows = monthlyRecords.filter(r => String(r.labourid) === String(worker.id));
+        const workerRows = filteredRecords.filter(r => String(r.labourid) === String(worker.id));
         
         let daysPresent = 0;
         let totalBaseEarned = 0;
@@ -116,12 +109,10 @@ async function calculateSalary() {
         let totalAdvance = 0;
 
         workerRows.forEach(row => {
-            // Count advance given regardless of status
             totalAdvance += parseFloat(row.advance) || 0;
 
             if (row.status === "Present") {
                 daysPresent++;
-                // Uses the dynamic historical wage saved at that exact timestamp, drops back to current base wage if missing
                 let activeWage = parseFloat(row.wageattime) || parseFloat(worker.wage) || 0;
                 totalBaseEarned += activeWage;
                 totalOT += parseFloat(row.otamount) || 0;
@@ -137,17 +128,88 @@ async function calculateSalary() {
                 <td style="padding: 8px;">₹${totalBaseEarned}</td>
                 <td style="padding: 8px; color: green;">+ ₹${totalOT}</td>
                 <td style="padding: 8px; color: red;">- ₹${totalAdvance}</td>
-                <td style="padding: 8px; font-weight: bold; background: #e3f2fd;">₹${netPayout}</td>
+                <td style="padding: 8px; font-weight: bold; background: #f1f8e9;">₹${netPayout}</td>
             </tr>
         `;
     });
 
-    tableHtml += `
-            </tbody>
-        </table>
-    `;
+    tableHtml += `</tbody></table>`;
+    return tableHtml;
+}
 
-    container.innerHTML = tableHtml;
+// 1. ENGINE FOR THE MONTHLY SELECTOR
+async function calculateMonthlySalary() {
+    const container = document.getElementById('salaryTableContainer');
+    const selectedMonthStr = document.getElementById('salaryMonth').value;
+    
+    if (!selectedMonthStr) return;
+    container.innerHTML = '<p style="color: gray; font-style: italic;">Fetching monthly logs...</p>';
+
+    const { data: history, error } = await _supabase.from('attendance_history').select('*');
+    if (error) {
+        container.innerHTML = `<p style="color: red;">Error: ${error.message}</p>`;
+        return;
+    }
+
+    const [year, month] = selectedMonthStr.split('-');
+    const mInt = parseInt(month, 10);
+    const yInt = parseInt(year, 10);
+
+    const monthlyRecords = history.filter(record => {
+        if (!record.date) return false;
+        const d = new Date(record.date);
+        return d.getMonth() + 1 === mInt && d.getFullYear() === yInt;
+    });
+
+    if (monthlyRecords.length === 0) {
+        container.innerHTML = '<p style="color: gray; font-style: italic;">No records found for this month.</p>';
+        return;
+    }
+
+    container.innerHTML = buildSalaryTable(monthlyRecords);
+}
+
+// 2. ENGINE FOR THE CUSTOM DATE RANGE CALENDAR PICKERS
+async function calculateRangeSalary() {
+    const container = document.getElementById('rangeSalaryTableContainer');
+    const startRaw = document.getElementById('rangeStart').value;
+    const endRaw = document.getElementById('rangeEnd').value;
+    
+    if (!startRaw || !endRaw) return;
+
+    // Convert date picker string selections into valid timestamp metrics
+    const startDate = new Date(startRaw);
+    startDate.setHours(0,0,0,0);
+    
+    const endDate = new Date(endRaw);
+    endDate.setHours(23,59,59,999);
+
+    if (startDate > endDate) {
+        container.innerHTML = '<p style="color: red; font-weight:bold;">Error: "From Date" cannot be after "To Date".</p>';
+        return;
+    }
+
+    container.innerHTML = '<p style="color: gray; font-style: italic;">Calculating custom range layout profiles...</p>';
+
+    const { data: history, error } = await _supabase.from('attendance_history').select('*');
+    if (error) {
+        container.innerHTML = `<p style="color: red;">Error: ${error.message}</p>`;
+        return;
+    }
+
+    // Filter cloud logs running strictly within the picked window bounds
+    const rangedRecords = history.filter(record => {
+        if (!record.date) return false;
+        const recordDate = new Date(record.date);
+        return recordDate >= startDate && recordDate <= endDate;
+    });
+
+    if (rangedRecords.length === 0) {
+        container.innerHTML = '<p style="color: gray; font-style: italic;">No records matched this specific range window.</p>';
+        return;
+    }
+
+    container.innerHTML = buildSalaryTable(rangedRecords);
 }
 </script>
 
