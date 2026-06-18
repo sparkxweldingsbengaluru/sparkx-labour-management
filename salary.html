@@ -5,9 +5,8 @@
     <link rel="stylesheet" href="style.css">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
-        /* Full width scrolling tables for perfect alignment */
-        .full-width-container { width: 100%; margin-bottom: 30px; }
-        table { width: 100%; border-collapse: collapse; min-width: 600px; font-size: 14px; }
+        .full-width-container { width: 100%; margin-bottom: 30px; padding: 20px; border: 1px solid #ddd; border-radius: 8px; background: #fff; }
+        table { width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 14px; }
         th, td { padding: 12px; border: 1px solid #ddd; text-align: left; }
         th { background-color: #333; color: white; }
     </style>
@@ -26,20 +25,20 @@
       
     <h1>Sparkx Welding and Fabrications Bengaluru</h1>
 
-    <div class="login-box full-width-container">
+    <div class="full-width-container">
         <h2>Table 1: Complete Monthly Salary</h2>
         <input type="month" id="salaryMonth" onchange="refreshAllSalaryData()">
         <div id="salaryTableContainer"></div>
     </div>
 
-    <div class="login-box full-width-container">
+    <div class="full-width-container">
         <h2>Table 2: Custom Date Range Earnings</h2>
         From: <input type="date" id="rangeStart" onchange="refreshAllSalaryData()">
         To: <input type="date" id="rangeEnd" onchange="refreshAllSalaryData()">
         <div id="rangeSalaryTableContainer"></div>
     </div>
 
-    <div class="login-box full-width-container" style="border-top: 4px solid #b71c1c;">
+    <div class="full-width-container" style="border-top: 4px solid #b71c1c;">
         <h2 id="formTitle">Table 3: Record a Cash Payout / Settlement</h2>
         <form id="payoutForm" onsubmit="handleFormSubmission(event)">
             <input type="hidden" id="editingPayoutId">
@@ -53,7 +52,7 @@
         <div id="payoutHistoryLog" style="margin-top:20px;"></div>
     </div>
 
-    <div class="login-box full-width-container" style="border-top: 4px solid #ff9100;">
+    <div class="full-width-container" style="border-top: 4px solid #ff9100;">
         <h2>Table 4: Custom Range Salary Paid Details</h2>
         From: <input type="date" id="paidStart" onchange="refreshAllSalaryData()">
         To: <input type="date" id="paidEnd" onchange="refreshAllSalaryData()">
@@ -77,10 +76,8 @@ window.onload = function() {
     document.getElementById('paidStart').value = month + "-01";
     document.getElementById('paidEnd').value = today;
     
-    // Populate dropdown
     const dropdown = document.getElementById('payoutWorker');
     labourList.forEach(w => dropdown.innerHTML += `<option value="${w.id}" data-name="${w.name}">${w.name}</option>`);
-    
     refreshAllSalaryData();
 };
 
@@ -133,10 +130,20 @@ function renderPaidDetails(pay) {
 
 function renderMasterLedger(pay) {
     document.getElementById('payoutHistoryLog').innerHTML = pay.map(p => `
-        <div style="border-bottom:1px solid #eee; padding:5px; display:flex; justify-content:space-between;">
-            ${p.name}: ₹${p.amount} (${p.type}) 
-            <button onclick='editPayout(${JSON.stringify(p).replace(/'/g, "&apos;")})'>EDIT</button>
+        <div style="border-bottom:1px solid #eee; padding:8px; display:flex; justify-content:space-between; align-items:center;">
+            <div><strong>${new Date(p.created_at).toLocaleDateString()}</strong> - ${p.name}: ₹${p.amount} (${p.type})</div>
+            <div>
+                <button onclick='editPayout(${JSON.stringify(p).replace(/'/g, "&apos;")})' style="background:#0288d1; color:white; border:none; padding:3px 8px; cursor:pointer;">EDIT</button>
+                <button onclick='deletePayout("${p.id}")' style="background:#d32f2f; color:white; border:none; padding:3px 8px; cursor:pointer; margin-left:5px;">DELETE</button>
+            </div>
         </div>`).join('');
+}
+
+async function deletePayout(id) {
+    if (confirm("Are you sure you want to permanently delete this record?")) {
+        await _supabase.from('workshop_payouts').delete().eq('id', id);
+        refreshAllSalaryData();
+    }
 }
 
 function editPayout(p) {
@@ -171,6 +178,7 @@ async function handleFormSubmission(e) {
     
     refreshAllSalaryData();
     clearPayoutForm();
+    document.getElementById('payoutAmount').value = "";
 }
 </script>
 </body>
