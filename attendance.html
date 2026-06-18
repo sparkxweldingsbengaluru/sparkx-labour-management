@@ -20,9 +20,9 @@
     <h2>Attendance Entry</h2>
 
     <div class="login-box">
-        <h3 id="date"></h3>
-        <h3 id="clock"></h3>
-        <hr>
+        <label style="font-weight: bold; color: #0d47a1;">Attendance Date</label><br>
+        <input type="date" id="attendanceDate" onchange="renderRecentEntries()" style="font-weight: bold; font-size: 16px; border: 2px solid #0d47a1;">
+        <hr style="margin: 15px 0;">
 
         <form id="attendanceForm">
             <label>Select Labour</label><br>
@@ -63,21 +63,26 @@
 
         <hr style="margin: 20px 0;">
         
-        <h3>Recent Entries (Today)</h3>
-        <div id="recentEntriesContainer">
-            <p style="color: gray; font-style: italic;">No entries made today yet.</p>
+        <h3 id="recentTitle">Recent Entries</h3>
+        <div id="recentEntriesContainer" style="max-height: 220px; overflow-y: auto; border: 1px solid #eee; padding: 10px; border-radius: 8px; background: #fafafa;">
+            <p style="color: gray; font-style: italic;">No entries made for this date yet.</p>
         </div>
     </div>
 </div>
 
 <script>
-function clock(){
-    let now = new Date();
-    document.getElementById("date").innerHTML = now.toDateString();
-    document.getElementById("clock").innerHTML = now.toLocaleTimeString();
-}
-setInterval(clock, 1000);
-clock();
+// Automatically set the calendar input to today's date on page load
+window.onload = function() {
+    let today = new Date();
+    let yyyy = today.getFullYear();
+    let mm = String(today.getMonth() + 1).padStart(2, '0');
+    let dd = String(today.getDate()).padStart(2, '0');
+    document.getElementById('attendanceDate').value = `${yyyy}-${mm}-${dd}`;
+    
+    populateTimeDropdowns();
+    toggleTimeFields(); 
+    renderRecentEntries();
+};
 
 let labourList = JSON.parse(localStorage.getItem('labourList')) || [
     { id: "1", name: "Javed", wage: 1300 }, 
@@ -117,7 +122,6 @@ function populateTimeDropdowns() {
         }
     });
 }
-populateTimeDropdowns();
 
 function toggleTimeFields() {
     const status = document.getElementById('attendanceStatus').value;
@@ -135,38 +139,47 @@ function toggleTimeFields() {
         outTime.removeAttribute('required');
     } else {
         wrapper.style.display = "block";
-        // Updated: Pre-fill standard shift hours to 8:00 AM and 5:00 PM
         inTime.value = "8:00 AM";
         outTime.value = "5:00 PM";
         inTime.setAttribute('required', 'required');
         outTime.setAttribute('required', 'required');
     }
 }
-toggleTimeFields();
 
+// Fixed Date Rendering: Converts raw browser picker value to match historical arrays
 function renderRecentEntries() {
     const container = document.getElementById('recentEntriesContainer');
+    const titleEl = document.getElementById('recentTitle');
+    const selectedRawDate = document.getElementById('attendanceDate').value;
+    
+    if(!selectedRawDate) return;
+
+    // Convert YYYY-MM-DD to standard browser local string format for cross-matching
+    const [y, m, d] = selectedRawDate.split('-');
+    let targetDateStr = new Date(y, m - 1, d).toLocaleDateString();
+
+    titleEl.textContent = `Entries for ${targetDateStr}`;
+    
     let history = JSON.parse(localStorage.getItem('attendanceHistory')) || [];
-    let todayStr = new Date().toLocaleDateString();
-    
     container.innerHTML = '';
-    let matchesToday = history.filter(r => r.date === todayStr);
     
-    if (matchesToday.length === 0) {
-        container.innerHTML = '<p style="color: gray; font-style: italic;">No entries made today yet.</p>';
+    let matchesTarget = history.filter(r => r.date === targetDateStr);
+    
+    if (matchesTarget.length === 0) {
+        container.innerHTML = '<p style="color: gray; font-style: italic;">No entries made for this date yet.</p>';
         return;
     }
     
     history.forEach(record => {
-        if (record.date === todayStr) {
+        if (record.date === targetDateStr) {
             let div = document.createElement('div');
-            div.style.padding = "10px 0";
+            div.style.padding = "5px 0";
             div.innerHTML = `
-                <p style="margin: 5px 0;"><strong>${record.name}</strong> - <span style="font-weight:bold; color:${record.status === 'Present' ? 'green' : 'red'};">${record.status}</span><br>
+                <p style="margin: 5px 0; font-size: 14px;"><strong>${record.name}</strong> - <span style="font-weight:bold; color:${record.status === 'Present' ? 'green' : 'red'};">${record.status}</span><br>
                 ${record.status === 'Present' ? `<small style="color: #666;">In: ${record.inTime} | Out: ${record.outTime}</small><br>` : ''}
-                (OT: ₹${record.otAmount}, Adv: ₹${record.advance})</p>
-                <button onclick="deleteAttendance('${record.entryId}')" style="background:#dc3545; padding: 5px 10px; font-size: 12px; width: auto; display: inline-block;">Delete Entry</button>
-                <hr style="margin: 10px 0; border: 0; border-top: 1px dashed #ccc;">
+                <small style="color:#333;">(OT: ₹${record.otAmount}, Adv: ₹${record.advance})</small></p>
+                <button onclick="deleteAttendance('${record.entryId}')" style="background:#dc3545; padding: 3px 8px; font-size: 11px; width: auto; display: inline-block; margin-bottom:5px;">Delete Entry</button>
+                <hr style="margin: 5px 0; border: 0; border-top: 1px dashed #ddd;">
             `;
             container.appendChild(div);
         }
@@ -179,10 +192,15 @@ document.getElementById('attendanceForm').addEventListener('submit', function(e)
     
     let worker = labourList.find(w => w.id === selectEl.value);
     let status = document.getElementById('attendanceStatus').value;
+    let selectedRawDate = document.getElementById('attendanceDate').value;
+    
+    // Save records based exactly on what date is picked in the calendar box
+    const [y, m, d] = selectedRawDate.split('-');
+    let finalSavedDateStr = new Date(y, m - 1, d).toLocaleDateString();
     
     let record = {
         entryId: "ATT_" + Date.now() + "_" + Math.floor(Math.random() * 1000),
-        date: new Date().toLocaleDateString(),
+        date: finalSavedDateStr,
         labourId: worker.id,
         name: worker.name,
         wageAtTime: worker.wage,
@@ -198,7 +216,11 @@ document.getElementById('attendanceForm').addEventListener('submit', function(e)
     localStorage.setItem('attendanceHistory', JSON.stringify(history));
 
     alert("Attendance saved successfully!");
-    this.reset();
+    
+    // Custom reset that keeps your chosen date active instead of wiping it
+    document.getElementById('labourSelect').value = "";
+    document.getElementById('attendanceStatus').value = "Present";
+    document.getElementById('advanceAmount').value = "0";
     toggleTimeFields(); 
     renderRecentEntries();
 });
@@ -211,8 +233,6 @@ window.deleteAttendance = function(targetEntryId) {
         renderRecentEntries();
     }
 }
-
-renderRecentEntries();
 </script>
 
 </body>
