@@ -37,11 +37,15 @@
             <br><br>
 
             <label>In Time</label><br>
-            <input type="time" id="inTime">
+            <select id="inTime" required>
+                <option value="">-- Select In Time --</option>
+                </select>
             <br><br>
 
             <label>Out Time</label><br>
-            <input type="time" id="outTime">
+            <select id="outTime" required>
+                <option value="">-- Select Out Time --</option>
+                </select>
             <br><br>
 
             <label>OT Amount</label><br>
@@ -73,10 +77,15 @@ function clock(){
 setInterval(clock, 1000);
 clock();
 
-let labourList = JSON.parse(localStorage.getItem('labourList')) || [{ id: "1", name: "Javed", wage: 1300 }, { id: "2", name: "Arbaj", wage: 1000 }];
+// Shared centralized data arrays fallback system
+let labourList = JSON.parse(localStorage.getItem('labourList')) || [
+    { id: "1", name: "Javed", wage: 1300 }, 
+    { id: "2", name: "Arbaj", wage: 1000 }
+];
 const selectEl = document.getElementById('labourSelect');
 
-// Populate dropdown
+// Clean and build dropdown menu selection
+selectEl.innerHTML = '<option value="">-- Choose Worker --</option>';
 labourList.forEach(w => {
     let opt = document.createElement('option');
     opt.value = w.id;
@@ -84,31 +93,61 @@ labourList.forEach(w => {
     selectEl.appendChild(opt);
 });
 
-// Function to load and render entries made today
+// Helper function to build 12-hour AM/PM options with 15, 30, 45 minute intervals
+function populateTimeDropdowns() {
+    const inTimeSelect = document.getElementById('inTime');
+    const outTimeSelect = document.getElementById('outTime');
+    
+    const periods = ["AM", "PM"];
+    const minutes = ["00", "15", "30", "45"];
+    
+    // We want a standard sequence: 12 AM to 11 AM, then 12 PM to 11 PM
+    periods.forEach(period => {
+        // Core hour loop
+        for (let h = 1; h <= 12; h++) {
+            // Minute interval loop
+            minutes.forEach(m => {
+                let timeString = `${h}:${m} ${period}`;
+                
+                let optIn = document.createElement('option');
+                optIn.value = timeString;
+                optIn.textContent = timeString;
+                inTimeSelect.appendChild(optIn);
+
+                let optOut = document.createElement('option');
+                optOut.value = timeString;
+                optOut.textContent = timeString;
+                outTimeSelect.appendChild(optOut);
+            });
+        }
+    });
+}
+populateTimeDropdowns();
+
+// Completely safe data rendering engine utilizing distinct IDs
 function renderRecentEntries() {
     const container = document.getElementById('recentEntriesContainer');
     let history = JSON.parse(localStorage.getItem('attendanceHistory')) || [];
     let todayStr = new Date().toLocaleDateString();
     
-    // Filter out only today's entries
-    let todayEntries = history.filter(r => r.date === todayStr);
-    
     container.innerHTML = '';
     
-    if (todayEntries.length === 0) {
+    let matchesToday = history.filter(r => r.date === todayStr);
+    
+    if (matchesToday.length === 0) {
         container.innerHTML = '<p style="color: gray; font-style: italic;">No entries made today yet.</p>';
         return;
     }
     
-    // Display today's entries with a delete button
-    // We pass the unique index from the main history array to target it precisely
-    history.forEach((record, originalIndex) => {
+    history.forEach(record => {
         if (record.date === todayStr) {
             let div = document.createElement('div');
             div.style.padding = "10px 0";
             div.innerHTML = `
-                <p style="margin: 5px 0;"><strong>${record.name}</strong> - ${record.status} (OT: ₹${record.otAmount}, Adv: ₹${record.advance})</p>
-                <button onclick="deleteAttendance(${originalIndex})" style="background:#dc3545; padding: 5px 10px; font-size: 12px; width: auto;">Delete Entry</button>
+                <p style="margin: 5px 0;"><strong>${record.name}</strong> - ${record.status}<br>
+                <small style="color: #666;">In: ${record.inTime || '--'} | Out: ${record.outTime || '--'}</small><br>
+                (OT: ₹${record.otAmount}, Adv: ₹${record.advance})</p>
+                <button onclick="deleteAttendance('${record.entryId}')" style="background:#dc3545; padding: 5px 10px; font-size: 12px; width: auto; display: inline-block;">Delete Entry</button>
                 <hr style="margin: 10px 0; border: 0; border-top: 1px dashed #ccc;">
             `;
             container.appendChild(div);
@@ -116,12 +155,15 @@ function renderRecentEntries() {
     });
 }
 
-// Handle Form Submission
+// Handle data submission routing safely
 document.getElementById('attendanceForm').addEventListener('submit', function(e) {
     e.preventDefault();
+    if(!selectEl.value) return alert("Please select a valid worker profile first!");
+    
     let worker = labourList.find(w => w.id === selectEl.value);
     
     let record = {
+        entryId: "ATT_" + Date.now() + "_" + Math.floor(Math.random() * 1000),
         date: new Date().toLocaleDateString(),
         labourId: worker.id,
         name: worker.name,
@@ -139,26 +181,18 @@ document.getElementById('attendanceForm').addEventListener('submit', function(e)
 
     alert("Attendance saved successfully!");
     this.reset();
-    renderRecentEntries(); // Refresh the list below
+    renderRecentEntries();
 });
 
-// NEW FUNCTION: Delete entry function
-function deleteAttendance(index) {
+window.deleteAttendance = function(targetEntryId) {
     if (confirm("Are you sure you want to delete this attendance entry?")) {
         let history = JSON.parse(localStorage.getItem('attendanceHistory')) || [];
-        
-        // Remove the entry at that specific position
-        history.splice(index, 1);
-        
-        // Save back to storage
+        history = history.filter(record => record.entryId !== targetEntryId);
         localStorage.setItem('attendanceHistory', JSON.stringify(history));
-        
-        // Refresh the list immediately
         renderRecentEntries();
     }
 }
 
-// Initial view check on load
 renderRecentEntries();
 </script>
 
