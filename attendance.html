@@ -29,30 +29,33 @@
             <select id="labourSelect" required><option value="">-- Choose Worker --</option></select>
             <br><br>
 
-            <label>Attendance</label><br>
-            <select id="attendanceStatus">
+            <label>Attendance Status</label><br>
+            <select id="attendanceStatus" onchange="toggleTimeFields()">
                 <option value="Present">Present</option>
                 <option value="Absent">Absent</option>
             </select>
             <br><br>
 
-            <label>In Time</label><br>
-            <select id="inTime" required>
-                <option value="">-- Select In Time --</option>
+            <!-- This wrapper box lets us hide/show all time fields together instantly -->
+            <div id="timeFieldsWrapper">
+                <label>In Time</label><br>
+                <select id="inTime">
+                    <option value="">-- Select In Time --</option>
                 </select>
-            <br><br>
+                <br><br>
 
-            <label>Out Time</label><br>
-            <select id="outTime" required>
-                <option value="">-- Select Out Time --</option>
+                <label>Out Time</label><br>
+                <select id="outTime">
+                    <option value="">-- Select Out Time --</option>
                 </select>
-            <br><br>
+                <br><br>
 
-            <label>OT Amount</label><br>
-            <input type="number" id="otAmount" placeholder="₹" value="0">
-            <br><br>
+                <label>OT Amount</label><br>
+                <input type="number" id="otAmount" placeholder="₹" value="0">
+                <br><br>
+            </div>
 
-            <label>Advance</label><br>
+            <label>Advance Given</label><br>
             <input type="number" id="advanceAmount" placeholder="₹" value="0">
             <br><br>
 
@@ -77,14 +80,12 @@ function clock(){
 setInterval(clock, 1000);
 clock();
 
-// Shared centralized data arrays fallback system
 let labourList = JSON.parse(localStorage.getItem('labourList')) || [
     { id: "1", name: "Javed", wage: 1300 }, 
     { id: "2", name: "Arbaj", wage: 1000 }
 ];
 const selectEl = document.getElementById('labourSelect');
 
-// Clean and build dropdown menu selection
 selectEl.innerHTML = '<option value="">-- Choose Worker --</option>';
 labourList.forEach(w => {
     let opt = document.createElement('option');
@@ -93,19 +94,15 @@ labourList.forEach(w => {
     selectEl.appendChild(opt);
 });
 
-// Helper function to build 12-hour AM/PM options with 15, 30, 45 minute intervals
+// Populates 12-hour AM/PM dropdown items
 function populateTimeDropdowns() {
     const inTimeSelect = document.getElementById('inTime');
     const outTimeSelect = document.getElementById('outTime');
-    
     const periods = ["AM", "PM"];
     const minutes = ["00", "15", "30", "45"];
     
-    // We want a standard sequence: 12 AM to 11 AM, then 12 PM to 11 PM
     periods.forEach(period => {
-        // Core hour loop
         for (let h = 1; h <= 12; h++) {
-            // Minute interval loop
             minutes.forEach(m => {
                 let timeString = `${h}:${m} ${period}`;
                 
@@ -124,14 +121,40 @@ function populateTimeDropdowns() {
 }
 populateTimeDropdowns();
 
-// Completely safe data rendering engine utilizing distinct IDs
+// NEW: Smart Visibility Toggle & Auto-Fill Logic
+function toggleTimeFields() {
+    const status = document.getElementById('attendanceStatus').value;
+    const wrapper = document.getElementById('timeFieldsWrapper');
+    const inTime = document.getElementById('inTime');
+    const outTime = document.getElementById('outTime');
+    const otAmount = document.getElementById('otAmount');
+
+    if (status === "Absent") {
+        wrapper.style.display = "none";
+        // Clear timing metrics if absent so old calculations don't bleed through
+        inTime.value = "";
+        outTime.value = "";
+        otAmount.value = "0";
+        inTime.removeAttribute('required');
+        outTime.removeAttribute('required');
+    } else {
+        wrapper.style.display = "block";
+        // Pre-fill standard shift hours: 9:00 AM to 6:00 PM
+        inTime.value = "9:00 AM";
+        outTime.value = "6:00 PM";
+        inTime.setAttribute('required', 'required');
+        outTime.setAttribute('required', 'required');
+    }
+}
+// Run once on load to ensure defaults lock in place
+toggleTimeFields();
+
 function renderRecentEntries() {
     const container = document.getElementById('recentEntriesContainer');
     let history = JSON.parse(localStorage.getItem('attendanceHistory')) || [];
     let todayStr = new Date().toLocaleDateString();
     
     container.innerHTML = '';
-    
     let matchesToday = history.filter(r => r.date === todayStr);
     
     if (matchesToday.length === 0) {
@@ -144,8 +167,8 @@ function renderRecentEntries() {
             let div = document.createElement('div');
             div.style.padding = "10px 0";
             div.innerHTML = `
-                <p style="margin: 5px 0;"><strong>${record.name}</strong> - ${record.status}<br>
-                <small style="color: #666;">In: ${record.inTime || '--'} | Out: ${record.outTime || '--'}</small><br>
+                <p style="margin: 5px 0;"><strong>${record.name}</strong> - <span style="font-weight:bold; color:${record.status === 'Present' ? 'green' : 'red'};">${record.status}</span><br>
+                ${record.status === 'Present' ? `<small style="color: #666;">In: ${record.inTime} | Out: ${record.outTime}</small><br>` : ''}
                 (OT: ₹${record.otAmount}, Adv: ₹${record.advance})</p>
                 <button onclick="deleteAttendance('${record.entryId}')" style="background:#dc3545; padding: 5px 10px; font-size: 12px; width: auto; display: inline-block;">Delete Entry</button>
                 <hr style="margin: 10px 0; border: 0; border-top: 1px dashed #ccc;">
@@ -155,12 +178,12 @@ function renderRecentEntries() {
     });
 }
 
-// Handle data submission routing safely
 document.getElementById('attendanceForm').addEventListener('submit', function(e) {
     e.preventDefault();
-    if(!selectEl.value) return alert("Please select a valid worker profile first!");
+    if(!selectEl.value) return alert("Please select a worker first!");
     
     let worker = labourList.find(w => w.id === selectEl.value);
+    let status = document.getElementById('attendanceStatus').value;
     
     let record = {
         entryId: "ATT_" + Date.now() + "_" + Math.floor(Math.random() * 1000),
@@ -168,10 +191,10 @@ document.getElementById('attendanceForm').addEventListener('submit', function(e)
         labourId: worker.id,
         name: worker.name,
         wageAtTime: worker.wage,
-        status: document.getElementById('attendanceStatus').value,
-        inTime: document.getElementById('inTime').value,
-        outTime: document.getElementById('outTime').value,
-        otAmount: parseFloat(document.getElementById('otAmount').value) || 0,
+        status: status,
+        inTime: status === "Present" ? document.getElementById('inTime').value : "--",
+        outTime: status === "Present" ? document.getElementById('outTime').value : "--",
+        otAmount: status === "Present" ? (parseFloat(document.getElementById('otAmount').value) || 0) : 0,
         advance: parseFloat(document.getElementById('advanceAmount').value) || 0
     };
 
@@ -181,6 +204,7 @@ document.getElementById('attendanceForm').addEventListener('submit', function(e)
 
     alert("Attendance saved successfully!");
     this.reset();
+    toggleTimeFields(); // Snap back elements to default view states
     renderRecentEntries();
 });
 
