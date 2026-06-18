@@ -4,31 +4,33 @@
     <title>Sparkx Labour Management</title>
     <link rel="stylesheet" href="style.css">
 </head>
-
 <body>
 
 <div class="container">
+    <h1>Sparkx Welding and Fabrications Bengaluru</h1>
+    <h2>Labour Attendance & Salary Management</h2>
 
-<h1>Sparkx Welding and Fabrications Bengaluru</h1>
-<h2>Labour Attendance & Salary Management</h2>
-
-<div class="login-box">
-
-<h3>Admin Login</h3>
-
-<input id="username" placeholder="Username">
-
-<input id="password" type="password" placeholder="Password">
-
-<button onclick="login()">LOGIN</button>
-
-<p id="message"></p>
-
+    <div class="login-box">
+        <h3>Admin Login</h3>
+        <input id="username" placeholder="Username">
+        <input id="password" type="password" placeholder="Password">
+        <button onclick="login()">LOGIN</button>
+        <p id="message" style="color: red; font-weight: bold; margin-top: 10px;"></p>
+    </div>
 </div>
 
-</div>
+<script>
+function login(){
+    let user = document.getElementById("username").value;
+    let pass = document.getElementById("password").value;
 
-<script src="script.js"></script>
+    if((user === "Admin1" && pass === "1234") || (user === "Admin2" && pass === "1234")){
+        window.location.href = "dashboard.html";
+    } else {
+        document.getElementById("message").innerHTML = "Invalid username or password";
+    }
+}
+</script>
 
 </body>
 </html>
