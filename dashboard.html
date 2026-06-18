@@ -37,10 +37,14 @@
         </div>
     </div>
 
+    <!-- Targeted Calendar Selection Feature -->
     <div class="login-box" style="max-width: 100%; box-sizing: border-box;">
-        <h3>Live Activity Feed (Recent Cloud Submissions)</h3>
-        <div id="activityFeedContainer">
-            <p style="color: gray; font-style: italic;">Connecting to cloud database streams...</p>
+        <h3 style="margin-top:0; color:#0d47a1;">View Daily Work History</h3>
+        <label style="font-size: 13px; color:#555;">Select a target date to audit worker profiles:</label><br>
+        <input type="date" id="historyFilterDate" onchange="loadDailyHistory()" style="font-weight: bold; font-size: 15px; border: 2px solid #0d47a1; padding: 6px; margin-top: 5px; margin-bottom: 15px;">
+        
+        <div id="dailyHistoryContainer">
+            <p style="color: gray; font-style: italic;">Select a calendar date above to query history logs...</p>
         </div>
     </div>
 </div>
@@ -54,12 +58,17 @@ const SUPABASE_KEY = "sb_publishable_ER-PXAe4A1vsLDYETL4BKw_G7p24kTE";
 const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 window.onload = function() {
+    // Default the date picker view to today automatically
+    let today = new Date();
+    let yyyy = today.getFullYear();
+    let mm = String(today.getMonth() + 1).padStart(2, '0');
+    let dd = String(today.getDate()).padStart(2, '0');
+    document.getElementById('historyFilterDate').value = `${yyyy}-${mm}-${dd}`;
+
     loadDashboardMetrics();
 };
 
 async function loadDashboardMetrics() {
-    const feedContainer = document.getElementById('activityFeedContainer');
-    
     // 1. Fetch total workers from the cloud list table
     const { data: workers, error: workerErr } = await _supabase
         .from('labour_list')
@@ -75,7 +84,7 @@ async function loadDashboardMetrics() {
         .select('*');
 
     if (historyErr) {
-        feedContainer.innerHTML = `<p style="color: red;">Cloud Data Sync Interrupted: ${historyErr.message}</p>`;
+        document.getElementById('dailyHistoryContainer').innerHTML = `<p style="color: red;">Cloud Data Sync Interrupted: ${historyErr.message}</p>`;
         return;
     }
 
@@ -104,36 +113,83 @@ async function loadDashboardMetrics() {
         }
     });
 
-    // Update screen metric values
+    // Update screen top metric cards
     document.getElementById('metricPresentToday').textContent = presentTodayCount;
     document.getElementById('metricMonthAdvance').textContent = "₹" + totalMonthlyAdvance;
 
-    // 3. Populate Recent Activity Stream (Latest 5 submissions first)
-    feedContainer.innerHTML = '';
-    if (!history || history.length === 0) {
-        feedContainer.innerHTML = '<p style="color: gray; font-style: italic;">Cloud data records are currently empty.</p>';
+    // Load initial history view for the default date set inside picker
+    loadDailyHistory();
+}
+
+async function loadDailyHistory() {
+    const container = document.getElementById('dailyHistoryContainer');
+    const selectedRawDate = document.getElementById('historyFilterDate').value;
+    
+    if(!selectedRawDate) {
+        container.innerHTML = '<p style="color: gray; font-style: italic;">Please choose a valid date entry.</p>';
         return;
     }
 
-    // Sort to display newest modifications on top
-    let sortedHistory = history.sort((a, b) => b.created_at.localeCompare(a.created_at)).slice(0, 5);
+    // Format local date text string configuration exactly to match saved cloud records
+    const [y, m, d] = selectedRawDate.split('-');
+    let targetDateStr = new Date(y, m - 1, d).toLocaleDateString();
 
-    sortedHistory.forEach(row => {
-        let logDiv = document.createElement('div');
-        logDiv.style.cssText = "padding: 10px; border-bottom: 1px solid #eee; font-size: 14px; line-height: 1.4;";
+    container.innerHTML = `<p style="color: gray; font-style: italic;">Loading log files for ${targetDateStr}...</p>`;
+
+    // Fetch matching data for selected date 
+    const { data: dailyRecords, error } = await _supabase
+        .from('attendance_history')
+        .select('*')
+        .eq('date', targetDateStr);
+
+    if (error) {
+        container.innerHTML = `<p style="color: red;">Error pulling work history: ${error.message}</p>`;
+        return;
+    }
+
+    container.innerHTML = '';
+    if (!dailyRecords || dailyRecords.length === 0) {
+        container.innerHTML = `<p style="color: #666; font-style: italic; padding: 10px; background: #f9f9f9; border-radius: 4px;">No shift assignments or work logs were submitted on ${targetDateStr}.</p>`;
+        return;
+    }
+
+    // Build the visual breakdown layout list
+    dailyRecords.forEach(row => {
+        let card = document.createElement('div');
+        card.style.cssText = "padding: 12px; border: 1px solid #e0e0e0; margin-bottom: 10px; border-radius: 6px; background: #fff; line-height: 1.5; box-shadow: 0 1px 3px rgba(0,0,0,0.05);";
         
-        let statusTag = row.status === "Present" 
-            ? `<span style="background: #e8f5e9; color: green; padding: 2px 6px; border-radius: 4px; font-weight: bold;">Present</span>`
-            : `<span style="background: #ffebee; color: red; padding: 2px 6px; border-radius: 4px; font-weight: bold;">Absent</span>`;
+        let statusBadge = row.status === "Present" 
+            ? `<span style="background: #e8f5e9; color: green; padding: 3px 8px; border-radius: 4px; font-weight: bold; font-size:12px; display:inline-block;">PRESENT</span>`
+            : `<span style="background: #ffebee; color: red; padding: 3px 8px; border-radius: 4px; font-weight: bold; font-size:12px; display:inline-block;">ABSENT</span>`;
 
-        logDiv.innerHTML = `
-            <strong>${row.name}</strong> was marked ${statusTag} for date <strong>${row.date}</strong><br>
-            <small style="color: #666;">
-                ${row.status === 'Present' ? `Hours: ${row.intime} - ${row.outtime} | OT: ₹${row.otamount}` : 'No active duty logged'} 
-                ${row.advance > 0 ? `| <span style="color:#d32f2f; font-weight:bold;">Advance Paid: ₹${row.advance}</span>` : ''}
-            </small>
+        let timingDetails = row.status === "Present"
+            ? `<table style="width: 100%; margin-top: 8px; font-size: 13px; border-collapse: collapse; color:#444;">
+                <tr>
+                    <td style="width:50%; padding: 2px 0;"><strong>In Time:</strong> ${row.intime}</td>
+                    <td style="width:50%; padding: 2px 0;"><strong>Out Time:</strong> ${row.outtime}</td>
+                </tr>
+                <tr>
+                    <td style="padding: 2px 0;"><strong>Overtime (OT):</strong> ₹${row.otamount}</td>
+                    <td style="padding: 2px 0;"><strong>Base Rate:</strong> ₹${row.wageattime}/day</td>
+                </tr>
+               </table>`
+            : `<p style="margin: 8px 0 0 0; font-size: 13px; color: #777; font-style: italic;">No standard shift hours compiled.</p>`;
+
+        let advanceNotice = row.advance > 0 
+            ? `<div style="margin-top: 8px; padding: 6px; background: #fff5f5; border-left: 4px solid #dc3545; font-size: 13px; font-weight: bold; color: #b71c1c;">
+                ⚠️ Advance Issued: ₹${row.advance}
+               </div>`
+            : '';
+
+        card.innerHTML = `
+            <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #f0f0f0; padding-bottom: 6px;">
+                <strong style="font-size: 16px; color: #111;">${row.name}</strong>
+                ${statusBadge}
+            </div>
+            ${timingDetails}
+            ${advanceNotice}
         `;
-        feedContainer.appendChild(logDiv);
+        container.appendChild(card);
     });
 }
 </script>
