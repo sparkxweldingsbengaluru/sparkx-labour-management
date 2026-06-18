@@ -3,6 +3,8 @@
 <head>
     <title>Sparkx Salary Management</title>
     <link rel="stylesheet" href="style.css">
+    <!-- Links your app to the free global Supabase engine -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
 
@@ -17,78 +19,135 @@
     </div>
       
     <h1>Sparkx Welding and Fabrications Bengaluru</h1>
-    <h2>Salary Management</h2>
+    <h2>Salary & Payout Calculator (Cloud Database Sync)</h2>
 
-    <div class="login-box">
-        <h3>Select Calculation Payroll Month</h3>
-        <input type="month" id="salaryMonth" onchange="loadSalaryData()">
+    <div class="login-box" style="max-width: 600px;">
+        <label style="font-weight: bold; color: #0d47a1;">Select Month for Calculations</label><br>
+        <input type="month" id="salaryMonth" onchange="calculateSalary()" style="font-weight: bold; font-size: 16px; border: 2px solid #0d47a1; padding: 5px;">
         <hr style="margin: 20px 0;">
-        <div id="salaryContainer"><p style="color: gray; font-style: italic;">Please select a payroll month.</p></div>
+
+        <div id="salaryTableContainer">
+            <p style="color: gray; font-style: italic;">Select a month to pull attendance and calculate salaries...</p>
+        </div>
     </div>
 </div>
 
 <script>
+// Cloud Database Connection Keys
+const SUPABASE_URL = "https://fjzqscohyteznkehiqnf.supabase.co"; 
+// ⚠️ Paste your long key from your settings screen between these quotes:
+const SUPABASE_KEY = "sb_publishable_ER-PXAe4A1vsLDYETL4BKw_G7p24kTE"; 
+
+const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
 window.onload = function() {
-    let today = new Date(), y = today.getFullYear(), m = String(today.getMonth() + 1).padStart(2, '0');
-    document.getElementById('salaryMonth').value = `${y}-${m}`;
-    loadSalaryData();
+    let today = new Date();
+    let yyyy = today.getFullYear();
+    let mm = String(today.getMonth() + 1).padStart(2, '0');
+    document.getElementById('salaryMonth').value = `${yyyy}-${mm}`;
+    calculateSalary();
 };
 
-function loadSalaryData() {
-    const selectedMonth = document.getElementById('salaryMonth').value;
-    const container = document.getElementById('salaryContainer');
-    if (!selectedMonth) return;
+// Local list of workers to define basic daily wage settings
+let labourList = JSON.parse(localStorage.getItem('labourList')) || [
+    { id: "1", name: "Javed", wage: 1300 }, 
+    { id: "2", name: "Arbaj", wage: 1000 }
+];
 
-    const [tYear, tMonth] = selectedMonth.split('-').map(Number);
-    let labourList = JSON.parse(localStorage.getItem('labourList')) || [{ id: "1", name: "Javed", wage: 1300 }, { id: "2", name: "Arbaj", wage: 1000 }];
-    let history = JSON.parse(localStorage.getItem('attendanceHistory')) || [];
-    let paidRegistry = JSON.parse(localStorage.getItem('paidSalaryRegistry')) || {};
+async function calculateSalary() {
+    const container = document.getElementById('salaryTableContainer');
+    const selectedMonthStr = document.getElementById('salaryMonth').value; // Format: "YYYY-MM"
+    
+    if (!selectedMonthStr) return;
+    
+    container.innerHTML = '<p style="color: gray; font-style: italic;">Fetching cloud records and compiling payout calculations...</p>';
 
-    container.innerHTML = '';
+    // 1. Fetch ALL records from the cloud table
+    const { data: history, error } = await _supabase
+        .from('attendance_history')
+        .select('*');
 
-    labourList.forEach((worker, index) => {
-        let records = history.filter(r => {
-            let d = new Date(r.date);
-            return r.labourId === worker.id && d.getFullYear() === tYear && (d.getMonth() + 1) === tMonth;
+    if (error) {
+        container.innerHTML = `<p style="color: red;">Cloud Error: ${error.message}</p>`;
+        return;
+    }
+
+    // 2. Filter records down to just the selected month
+    // Matches dates saved in standard string formats containing "/MM/YYYY" or "M/D/YYYY"
+    const [year, month] = selectedMonthStr.split('-');
+    const parsedMonthInt = parseInt(month, 10);
+    const parsedYearInt = parseInt(year, 10);
+
+    const monthlyRecords = history.filter(record => {
+        if (!record.date) return false;
+        const d = new Date(record.date);
+        return d.getMonth() + 1 === parsedMonthInt && d.getFullYear() === parsedYearInt;
+    });
+
+    if (monthlyRecords.length === 0) {
+        container.innerHTML = '<p style="color: gray; font-style: italic;">No cloud attendance entries found for this month.</p>';
+        return;
+    }
+
+    // 3. Build HTML Table structure
+    let tableHtml = `
+        <table border="1" style="width:100%; border-collapse: collapse; text-align: left; margin-top: 10px;">
+            <thead>
+                <tr style="background-color: #0d47a1; color: white;">
+                    <th style="padding: 8px;">Worker Name</th>
+                    <th style="padding: 8px;">Days Present</th>
+                    <th style="padding: 8px;">Base Earned</th>
+                    <th style="padding: 8px;">Total OT</th>
+                    <th style="padding: 8px;">Total Adv</th>
+                    <th style="padding: 8px; color: #ffeb3b;">Net Payout</th>
+                </tr>
+            </thead>
+            <tbody>
+    `;
+
+    // 4. Calculate figures worker by worker
+    labourList.forEach(worker => {
+        // Filter cloud entries belonging specifically to this single worker
+        const workerRows = monthlyRecords.filter(r => String(r.labourid) === String(worker.id));
+        
+        let daysPresent = 0;
+        let totalBaseEarned = 0;
+        let totalOT = 0;
+        let totalAdvance = 0;
+
+        workerRows.forEach(row => {
+            // Count advance given regardless of status
+            totalAdvance += parseFloat(row.advance) || 0;
+
+            if (row.status === "Present") {
+                daysPresent++;
+                // Uses the dynamic historical wage saved at that exact timestamp, drops back to current base wage if missing
+                let activeWage = parseFloat(row.wageattime) || parseFloat(worker.wage) || 0;
+                totalBaseEarned += activeWage;
+                totalOT += parseFloat(row.otamount) || 0;
+            }
         });
 
-        let workingDays = records.filter(r => r.status === "Present").length;
-        let totalOT = records.reduce((sum, r) => sum + r.otAmount, 0);
-        let totalAdv = records.reduce((sum, r) => sum + r.advance, 0);
-        let netPayout = (workingDays * worker.wage + totalOT) - totalAdv;
-        let isPaid = paidRegistry[`${worker.id}_${selectedMonth}`] ? true : false;
+        let netPayout = (totalBaseEarned + totalOT) - totalAdvance;
 
-        const card = document.createElement('div');
-        card.innerHTML = `
-            <h3>${worker.name}</h3>
-            <p>Daily Wage: ₹${worker.wage}</p>
-            <p>Working Days: ${workingDays} | OT: ₹${totalOT} | Advance Deductions: ₹${totalAdv}</p>
-            <p><strong>Net Final Payout:</strong> ₹${netPayout}</p>
-            <select id="status_${worker.id}" ${isPaid ? 'disabled' : ''}>
-                <option value="Pending" ${!isPaid ? 'selected' : ''}>Pending</option>
-                <option value="Cleared" ${isPaid ? 'selected' : ''}>Cleared</option>
-            </select><br><br>
-            <button onclick="processPayment('${worker.id}', '${selectedMonth}')" ${isPaid ? 'style="background:#6c757d;"' : ''}>
-                ${isPaid ? 'Salary Disbursed' : 'Pay & Print Slip'}
-            </button>
-            ${index < labourList.length - 1 ? '<hr style="margin:25px 0; border-top:1px dashed #ccc;">' : ''}
+        tableHtml += `
+            <tr style="border-bottom: 1px solid #ddd;">
+                <td style="padding: 8px; font-weight: bold;">${worker.name}</td>
+                <td style="padding: 8px;">${daysPresent} days</td>
+                <td style="padding: 8px;">₹${totalBaseEarned}</td>
+                <td style="padding: 8px; color: green;">+ ₹${totalOT}</td>
+                <td style="padding: 8px; color: red;">- ₹${totalAdvance}</td>
+                <td style="padding: 8px; font-weight: bold; background: #e3f2fd;">₹${netPayout}</td>
+            </tr>
         `;
-        container.appendChild(card);
     });
-}
 
-function processPayment(workerId, monthStr) {
-    const dropdown = document.getElementById(`status_${workerId}`);
-    if (dropdown.value === "Cleared") {
-        let paidRegistry = JSON.parse(localStorage.getItem('paidSalaryRegistry')) || {};
-        paidRegistry[`${workerId}_${monthStr}`] = true;
-        localStorage.setItem('paidSalaryRegistry', JSON.stringify(paidRegistry));
-        alert("Payment Processed! Opening print window...");
-        window.print();
-        loadSalaryData();
-    } else {
-        alert("Please change status to 'Cleared' first.");
-    }
+    tableHtml += `
+            </tbody>
+        </table>
+    `;
+
+    container.innerHTML = tableHtml;
 }
 </script>
 
