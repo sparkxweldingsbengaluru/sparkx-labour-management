@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Sparkx Dashboard</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+<div class="container">
+
+<h1>Sparkx Welding and Fabrications Bengaluru</h1>
+
+<h2>Labour Management Dashboard</h2>
+
+<div class="login-box">
+
+<h3 id="date"></h3>
+<h3 id="clock"></h3>
+
+<hr>
+
+<h2>👷 Labour Summary</h2>
+
+<p>Javed - ₹1300/day</p>
+<p>Arbaj - ₹1000/day</p>
+
+<hr>
+
+<h2>Quick Actions</h2>
+
+<button>Attendance</button>
+<br><br>
+
+<button>Salary</button>
+<br><br>
+
+<button>Reports</button>
+
+</div>
+
+</div>
+
+
+<script>
+
+function showTime(){
+
+let now = new Date();
+
+document.getElementById("date").innerHTML =
+now.toDateString();
+
+document.getElementById("clock").innerHTML =
+now.toLocaleTimeString();
+
+}
+
+setInterval(showTime,1000);
+
+showTime();
+
+</script>
+
+
+</body>
+</html>
