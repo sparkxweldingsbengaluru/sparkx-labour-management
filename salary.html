@@ -25,12 +25,14 @@
       
     <h1>Sparkx Welding and Fabrications Bengaluru</h1>
 
+    <!-- TABLE 1 -->
     <div class="full-width-container">
         <h2>Table 1: Complete Monthly Salary</h2>
         <input type="month" id="salaryMonth" onchange="refreshAllSalaryData()">
         <div id="salaryTableContainer"></div>
     </div>
 
+    <!-- TABLE 2 -->
     <div class="full-width-container">
         <h2>Table 2: Custom Date Range Earnings</h2>
         From: <input type="date" id="rangeStart" onchange="refreshAllSalaryData()">
@@ -38,6 +40,7 @@
         <div id="rangeSalaryTableContainer"></div>
     </div>
 
+    <!-- TABLE 3: PAYOUT ENTRY -->
     <div class="full-width-container" style="border-top: 4px solid #b71c1c;">
         <h2 id="formTitle">Table 3: Record a Cash Payout / Settlement</h2>
         <form id="payoutForm" onsubmit="handleFormSubmission(event)">
@@ -52,6 +55,7 @@
         <div id="payoutHistoryLog" style="margin-top:20px;"></div>
     </div>
 
+    <!-- TABLE 4: PAID DETAILS -->
     <div class="full-width-container" style="border-top: 4px solid #ff9100;">
         <h2>Table 4: Custom Range Salary Paid Details</h2>
         From: <input type="date" id="paidStart" onchange="refreshAllSalaryData()">
@@ -111,10 +115,18 @@ function generateTable(attRows, payRows) {
     labourList.forEach(w => {
         const wAtt = attRows.filter(r => r.labourid == w.id && r.status == "Present");
         const wPay = payRows.filter(p => p.labourid == w.id);
+        
         const gross = wAtt.reduce((sum, r) => sum + (parseFloat(r.wageattime)||w.wage) + (parseFloat(r.otamount)||0), 0);
-        const adv = wPay.filter(p => p.type == "Advance").reduce((s, p) => s + parseFloat(p.amount), 0);
-        const set = wPay.filter(p => p.type == "Final Settlement").reduce((s, p) => s + parseFloat(p.amount), 0);
-        html += `<tr><td>${w.name}</td><td>₹${gross}</td><td>₹${adv}</td><td>₹${set}</td><td style="font-weight:bold; color:${gross-adv-set<0?'red':'green'}">₹${gross-adv-set}</td></tr>`;
+        
+        // Combined Advances from Attendance AND Payouts
+        const attAdvances = wAtt.reduce((sum, r) => sum + (parseFloat(r.advance)||0), 0);
+        const payoutAdvances = wPay.filter(p => p.type == "Advance").reduce((sum, p) => sum + parseFloat(p.amount), 0);
+        const totalAdvances = attAdvances + payoutAdvances;
+        
+        const totalSettlements = wPay.filter(p => p.type == "Final Settlement").reduce((sum, p) => sum + parseFloat(p.amount), 0);
+        const net = gross - totalAdvances - totalSettlements;
+        
+        html += `<tr><td>${w.name}</td><td>₹${gross}</td><td>₹${totalAdvances}</td><td>₹${totalSettlements}</td><td style="font-weight:bold; color:${net<0?'red':'green'}">₹${net}</td></tr>`;
     });
     return html + `</table>`;
 }
