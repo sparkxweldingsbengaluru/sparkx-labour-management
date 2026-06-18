@@ -1,8 +1,10 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Sparkx Reports</title>
+    <title>Sparkx Reports & Logs</title>
     <link rel="stylesheet" href="style.css">
+    <!-- Links your app to the free global Supabase engine -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
 
@@ -17,59 +19,133 @@
     </div>
       
     <h1>Sparkx Welding and Fabrications Bengaluru</h1>
-    <h2>Labour Reports</h2>
+    <h2>Attendance Reports & Master Log (Cloud Sync)</h2>
 
-    <div class="login-box">
-        <h3>Monthly Report</h3>
-        <label>Select Month</label><br>
-        <input type="month" id="reportMonth" onchange="generateReport()">
-        <hr>
-        <div id="reportsContainer"></div>
-        <br>
-        <button onclick="window.print()">Print Report</button>
+    <div class="login-box" style="max-width: 800px;">
+        <div style="display: flex; gap: 15px; margin-bottom: 20px; align-items: flex-end; flex-wrap: wrap;">
+            <div style="flex: 1; min-width: 200px;">
+                <label style="font-weight: bold; color: #0d47a1;">Filter by Worker (Optional)</label><br>
+                <select id="reportLabourFilter" onchange="generateReport()" style="width: 100%; padding: 6px; margin-top: 5px;">
+                    <option value="ALL">-- All Workers --</option>
+                </select>
+            </div>
+            <div>
+                <button onclick="window.print()" style="background: #28a745; padding: 8px 15px; font-weight: bold;">🖨️ PRINT REPORT</button>
+            </div>
+        </div>
+
+        <hr style="margin: 20px 0;">
+
+        <div id="reportTableContainer">
+            <p style="color: gray; font-style: italic;">Loading compiled history log from the cloud...</p>
+        </div>
     </div>
 </div>
 
 <script>
+// Cloud Database Connection Keys
+const SUPABASE_URL = "https://fjzqscohyteznkehiqnf.supabase.co"; 
+// ⚠️ Paste your long key from your settings screen between these quotes:
+const SUPABASE_KEY = "sb_publishable_ER-PXAe4A1vsLDYETL4BKw_G7p24kTE"; 
+
+const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
 window.onload = function() {
-    let today = new Date(), y = today.getFullYear(), m = String(today.getMonth() + 1).padStart(2, '0');
-    document.getElementById('reportMonth').value = `${y}-${m}`;
+    populateWorkerFilter();
     generateReport();
 };
 
-function generateReport() {
-    const monthVal = document.getElementById('reportMonth').value;
-    const container = document.getElementById('reportsContainer');
-    if (!monthVal) return;
+// Pulls current registry details to populate the filter dropdown element
+async function populateWorkerFilter() {
+    const filterSelect = document.getElementById('reportLabourFilter');
+    
+    const { data: workers } = await _supabase
+        .from('labour_list')
+        .select('*')
+        .order('name', { ascending: true });
 
-    const [tYear, tMonth] = monthVal.split('-').map(Number);
-    let labourList = JSON.parse(localStorage.getItem('labourList')) || [{ id: "1", name: "Javed", wage: 1300 }, { id: "2", name: "Arbaj", wage: 1000 }];
-    let history = JSON.parse(localStorage.getItem('attendanceHistory')) || [];
-    let paidRegistry = JSON.parse(localStorage.getItem('paidSalaryRegistry')) || {};
-
-    container.innerHTML = '';
-
-    labourList.forEach((worker, index) => {
-        let records = history.filter(r => {
-            let d = new Date(r.date);
-            return r.labourId === worker.id && d.getFullYear() === tYear && (d.getMonth() + 1) === tMonth;
+    if (workers) {
+        workers.forEach(w => {
+            let opt = document.createElement('option');
+            opt.value = w.id;
+            opt.textContent = w.name;
+            filterSelect.appendChild(opt);
         });
+    }
+}
 
-        let workingDays = records.filter(r => r.status === "Present").length;
-        let totalOT = records.reduce((sum, r) => sum + r.otAmount, 0);
-        let totalAdv = records.reduce((sum, r) => sum + r.advance, 0);
-        let isPaid = paidRegistry[`${worker.id}_${monthVal}`] ? "Paid" : "Pending";
+async function generateReport() {
+    const container = document.getElementById('reportTableContainer');
+    const selectedFilter = document.getElementById('reportLabourFilter').value;
+    
+    container.innerHTML = '<p style="color: gray; font-style: italic;">Pulling continuous log records from cloud database...</p>';
 
-        const div = document.createElement('div');
-        div.innerHTML = `
-            <h3>${worker.name}</h3>
-            <p>Daily Wage: ₹${worker.wage}</p>
-            <p>Working Days: ${workingDays} | OT Total: ₹${totalOT} | Advance Total: ₹${totalAdv}</p>
-            <p>Salary Status: <span style="font-weight:bold; color:${isPaid === 'Paid' ? 'green' : 'orange'};">${isPaid}</span></p>
-            ${index < labourList.length - 1 ? '<hr style="margin:15px 0; border-top:1px dashed #ccc;">' : ''}
+    // Fetch master history rows from cloud table
+    const { data: history, error } = await _supabase
+        .from('attendance_history')
+        .select('*');
+
+    if (error) {
+        container.innerHTML = `<p style="color: red;">Cloud Retrieval Error: ${error.message}</p>`;
+        return;
+    }
+
+    if (!history || history.length === 0) {
+        container.innerHTML = '<p style="color: gray; font-style: italic;">No historical attendance data found in the cloud.</p>';
+        return;
+    }
+
+    // Sort logs chronologically (newest entries at top)
+    let sortedData = history.sort((a, b) => b.created_at.localeCompare(a.created_at));
+
+    // Apply worker filter if single selection made
+    if (selectedFilter !== "ALL") {
+        sortedData = sortedData.filter(r => String(r.labourid) === String(selectedFilter));
+    }
+
+    if (sortedData.length === 0) {
+        container.innerHTML = '<p style="color: gray; font-style: italic;">No records match your filter criteria.</p>';
+        return;
+    }
+
+    // Compile dynamic master layout table array
+    let tableHtml = `
+        <table border="1" style="width:100%; border-collapse: collapse; text-align: left; font-size: 14px;">
+            <thead>
+                <tr style="background-color: #333; color: white;">
+                    <th style="padding: 8px;">Date</th>
+                    <th style="padding: 8px;">Worker Name</th>
+                    <th style="padding: 8px;">Status</th>
+                    <th style="padding: 8px;">Timings</th>
+                    <th style="padding: 8px;">OT Amount</th>
+                    <th style="padding: 8px;">Advance Given</th>
+                </tr>
+            </thead>
+            <tbody>
+    `;
+
+    sortedData.forEach(row => {
+        let isPresent = row.status === "Present";
+        tableHtml += `
+            <tr style="border-bottom: 1px solid #ddd; background: ${isPresent ? '#fff' : '#fff3f3'};">
+                <td style="padding: 8px; font-weight: bold;">${row.date}</td>
+                <td style="padding: 8px;">${row.name}</td>
+                <td style="padding: 8px; font-weight: bold; color: ${isPresent ? 'green' : 'red'};">${row.status}</td>
+                <td style="padding: 8px; color: #555;">${isPresent ? `${row.intime} - ${row.outtime}` : '--'}</td>
+                <td style="padding: 8px; color: green;">${row.otamount > 0 ? `₹${row.otamount}` : '₹0'}</td>
+                <td style="padding: 8px; color: ${row.advance > 0 ? 'red' : '#333'}; font-weight: ${row.advance > 0 ? 'bold' : 'normal'};">
+                    ${row.advance > 0 ? `₹${row.advance}` : '₹0'}
+                </td>
+            </tr>
         `;
-        container.appendChild(div);
     });
+
+    tableHtml += `
+            </tbody>
+        </table>
+    `;
+
+    container.innerHTML = tableHtml;
 }
 </script>
 
