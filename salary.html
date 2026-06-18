@@ -3,7 +3,6 @@
 <head>
     <title>Sparkx Salary Management</title>
     <link rel="stylesheet" href="style.css">
-    <!-- Links your app to the free global Supabase engine -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
@@ -22,7 +21,7 @@
     <h2>Salary & Payout Calculator (Cloud Database Sync)</h2>
 
     <!-- Option 1: Monthly View -->
-    <div class="login-box" style="max-width: 650px; margin-bottom: 25px;">
+    <div class="login-box" style="max-width: 750px; margin-bottom: 25px;">
         <label style="font-weight: bold; color: #0d47a1; font-size: 16px;">Option 1: View Complete Monthly Salary</label><br><br>
         <input type="month" id="salaryMonth" onchange="calculateMonthlySalary()" style="font-weight: bold; font-size: 16px; border: 2px solid #0d47a1; padding: 5px;">
         <hr style="margin: 20px 0;">
@@ -33,7 +32,7 @@
     </div>
 
     <!-- Option 2: Custom Date Range View -->
-    <div class="login-box" style="max-width: 650px;">
+    <div class="login-box" style="max-width: 750px; margin-bottom: 25px;">
         <label style="font-weight: bold; color: #28a745; font-size: 16px;">Option 2: View Custom Date Range Salary</label><br><br>
         
         <div style="display: flex; gap: 15px; flex-wrap: wrap;">
@@ -53,82 +52,196 @@
             <p style="color: gray; font-style: italic;">Select both dates above to see custom window calculations...</p>
         </div>
     </div>
+
+    <!-- NEW SECTION BELOW OPTION 2: Cash Payout Form & Receipt Ledger -->
+    <div class="login-box" style="max-width: 750px; border-top: 4px solid #b71c1c;">
+        <label style="font-weight: bold; color: #b71c1c; font-size: 16px;">💰 Record a Cash Payout / Settlement</label><br><br>
+        
+        <form id="payoutForm" onsubmit="savePayout(event)" style="display: flex; gap: 12px; flex-wrap: wrap; align-items: flex-end; background: #fff5f5; padding: 15px; border-radius: 6px;">
+            <div style="flex: 1; min-width: 140px;">
+                <label style="font-size: 12px; font-weight: bold;">Select Worker:</label>
+                <select id="payoutWorker" required style="width: 100%; padding: 6px; margin-top: 4px;"></select>
+            </div>
+            <div style="width: 120px;">
+                <label style="font-size: 12px; font-weight: bold;">Amount (₹):</label>
+                <input type="number" id="payoutAmount" required min="1" style="width: 100%; padding: 5px; margin-top: 4px; box-sizing: border-box;">
+            </div>
+            <div style="width: 150px;">
+                <label style="font-size: 12px; font-weight: bold;">Payment Type:</label>
+                <select id="payoutType" style="width: 100%; padding: 6px; margin-top: 4px;">
+                    <option value="Advance">Mid-Week Advance</option>
+                    <option value="Final Settlement">Final Settlement</option>
+                </select>
+            </div>
+            <div style="flex: 1; min-width: 140px;">
+                <label style="font-size: 12px; font-weight: bold;">Notes / Remarks:</label>
+                <input type="text" id="payoutNotes" placeholder="e.g. Cash handed over" style="width: 100%; padding: 5px; margin-top: 4px; box-sizing: border-box;">
+            </div>
+            <div>
+                <button type="submit" style="background: #b71c1c; color: white; font-weight: bold; padding: 7px 15px; border: none; border-radius: 4px; cursor: pointer;">SAVE PAYOUT</button>
+            </div>
+        </form>
+
+        <h3 style="margin-top: 25px; font-size: 14px; color: #333; text-transform: uppercase;">📜 Master Receipt Log (All Recorded Payments)</h3>
+        <div id="payoutHistoryLog" style="max-height: 250px; overflow-y: auto; border: 1px solid #ddd; background: #fafafa; border-radius: 4px; padding: 10px;">
+            <p style="color: gray; font-style: italic;">Loading payment ledger history...</p>
+        </div>
+    </div>
 </div>
 
 <script>
-// Cloud Database Connection Keys
 const SUPABASE_URL = "https://fjzqscohyteznkehiqnf.supabase.co"; 
-// ⚠️ Paste your long key from your settings screen between these quotes:
 const SUPABASE_KEY = "sb_publishable_ER-PXAe4A1vsLDYETL4BKw_G7p24kTE"; 
 
 const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-window.onload = function() {
-    let today = new Date();
-    let yyyy = today.getFullYear();
-    let mm = String(today.getMonth() + 1).padStart(2, '0');
-    document.getElementById('salaryMonth').value = `${yyyy}-${mm}`;
-    
-    // Default values for custom date pickers
-    let dd = String(today.getDate()).padStart(2, '0');
-    document.getElementById('rangeStart').value = `${yyyy}-${mm}-01`; // Start of current month
-    document.getElementById('rangeEnd').value = `${yyyy}-${mm}-${dd}`; // Today
-    
-    calculateMonthlySalary();
-    calculateRangeSalary();
-};
-
+// Fallback registry details
 let labourList = JSON.parse(localStorage.getItem('labourList')) || [
     { id: "1", name: "Javed", wage: 1300 }, 
     { id: "2", name: "Arbaj", wage: 1000 }
 ];
 
-// Reusable engine to turn filtered records array into a beautiful clean data table layout
-function buildSalaryTable(filteredRecords) {
+window.onload = function() {
+    let today = new Date();
+    let yyyy = today.getFullYear();
+    let mm = String(today.getMonth() + 1).padStart(2, '0');
+    let dd = String(today.getDate()).padStart(2, '0');
+    
+    document.getElementById('salaryMonth').value = `${yyyy}-${mm}`;
+    document.getElementById('rangeStart').value = `${yyyy}-${mm}-01`;
+    document.getElementById('rangeEnd').value = `${yyyy}-${mm}-${dd}`;
+    
+    populatePayoutDropdown();
+    refreshAllSalaryData();
+};
+
+function populatePayoutDropdown() {
+    const dropdown = document.getElementById('payoutWorker');
+    dropdown.innerHTML = "";
+    labourList.forEach(w => {
+        let opt = document.createElement('option');
+        opt.value = w.id;
+        opt.setAttribute('data-name', w.name);
+        opt.textContent = w.name;
+        dropdown.appendChild(opt);
+    });
+}
+
+async function refreshAllSalaryData() {
+    // Pull master history logs and master cash payouts simultaneously 
+    const { data: attendanceHistory } = await _supabase.from('attendance_history').select('*');
+    const { data: payoutHistory } = await _supabase.from('workshop_payouts').select('*').order('created_at', { ascending: false });
+
+    renderMonthlyTable(attendanceHistory || [], payoutHistory || []);
+    renderRangeTable(attendanceHistory || [], payoutHistory || []);
+    renderPayoutLedger(payoutHistory || []);
+}
+
+// 1. ENGINE FOR MONTHLY SALARY TABLE
+function renderMonthlyTable(attendance, payouts) {
+    const container = document.getElementById('salaryTableContainer');
+    const selectedMonthStr = document.getElementById('salaryMonth').value;
+    if (!selectedMonthStr) return;
+
+    const [year, month] = selectedMonthStr.split('-');
+    const mInt = parseInt(month, 10);
+    const yInt = parseInt(year, 10);
+
+    // Filter data matching this month
+    const filteredAttendance = attendance.filter(r => {
+        if (!r.date) return false;
+        const d = new Date(r.date);
+        return d.getMonth() + 1 === mInt && d.getFullYear() === yInt;
+    });
+
+    // Filter payouts matching this month
+    const filteredPayouts = payouts.filter(p => {
+        const d = new Date(p.created_at);
+        return d.getMonth() + 1 === mInt && d.getFullYear() === yInt;
+    });
+
+    container.innerHTML = generateCalculatedHTML(filteredAttendance, filteredPayouts);
+}
+
+// 2. ENGINE FOR CUSTOM DATE RANGE TABLE
+function renderRangeTable(attendance, payouts) {
+    const container = document.getElementById('rangeSalaryTableContainer');
+    const startRaw = document.getElementById('rangeStart').value;
+    const endRaw = document.getElementById('rangeEnd').value;
+    if (!startRaw || !endRaw) return;
+
+    const startDate = new Date(startRaw); startDate.setHours(0,0,0,0);
+    const endDate = new Date(endRaw); endDate.setHours(23,59,59,999);
+
+    if (startDate > endDate) {
+        container.innerHTML = '<p style="color: red; font-weight:bold;">Error: From Date is after To Date.</p>';
+        return;
+    }
+
+    const filteredAttendance = attendance.filter(r => {
+        if (!r.date) return false;
+        const d = new Date(r.date);
+        return d >= startDate && d <= endDate;
+    });
+
+    const filteredPayouts = payouts.filter(p => {
+        const d = new Date(p.created_at);
+        return d >= startDate && d <= endDate;
+    });
+
+    container.innerHTML = generateCalculatedHTML(filteredAttendance, filteredPayouts);
+}
+
+// REUSABLE HTML GENERATOR MATRIX WITH DYNAMIC CASH CALCULATIONS
+function generateCalculatedHTML(attendanceRows, payoutRows) {
     let tableHtml = `
-        <table border="1" style="width:100%; border-collapse: collapse; text-align: left; margin-top: 10px; font-size: 14px;">
+        <table border="1" style="width:100%; border-collapse: collapse; text-align: left; font-size: 14px;">
             <thead>
                 <tr style="background-color: #333; color: white;">
                     <th style="padding: 8px;">Worker Name</th>
                     <th style="padding: 8px;">Days Present</th>
-                    <th style="padding: 8px;">Base Earned</th>
-                    <th style="padding: 8px;">Total OT</th>
-                    <th style="padding: 8px;">Total Adv</th>
-                    <th style="padding: 8px; background-color: #2e7d32;">Net Payout</th>
+                    <th style="padding: 8px;">Total Earned (Wages+OT)</th>
+                    <th style="padding: 8px;">Mid-Week Advances</th>
+                    <th style="padding: 8px;">Final Settlements Paid</th>
+                    <th style="padding: 8px; background-color: #2e7d32;">Net Balance</th>
                 </tr>
             </thead>
             <tbody>
     `;
 
     labourList.forEach(worker => {
-        const workerRows = filteredRecords.filter(r => String(r.labourid) === String(worker.id));
-        
+        const wAttendance = attendanceRows.filter(r => String(r.labourid) === String(worker.id));
+        const wPayouts = payoutRows.filter(p => String(p.labourid) === String(worker.id));
+
         let daysPresent = 0;
-        let totalBaseEarned = 0;
-        let totalOT = 0;
-        let totalAdvance = 0;
-
-        workerRows.forEach(row => {
-            totalAdvance += parseFloat(row.advance) || 0;
-
-            if (row.status === "Present") {
+        let totalGross = 0;
+        
+        // Add up attendance logs
+        wAttendance.forEach(row => {
+            if(row.status === "Present") {
                 daysPresent++;
                 let activeWage = parseFloat(row.wageattime) || parseFloat(worker.wage) || 0;
-                totalBaseEarned += activeWage;
-                totalOT += parseFloat(row.otamount) || 0;
+                totalGross += activeWage + (parseFloat(row.otamount) || 0);
             }
         });
 
-        let netPayout = (totalBaseEarned + totalOT) - totalAdvance;
+        // Separate and add up the two payout cash classifications
+        let totalAdvances = wPayouts.filter(p => p.type === "Advance").reduce((sum, p) => sum + parseFloat(p.amount), 0);
+        let totalSettlements = wPayouts.filter(p => p.type === "Final Settlement").reduce((sum, p) => sum + parseFloat(p.amount), 0);
+
+        // Net Remaining Formula = Gross minus everything handed over
+        let netBalance = totalGross - (totalAdvances + totalSettlements);
 
         tableHtml += `
             <tr style="border-bottom: 1px solid #ddd;">
                 <td style="padding: 8px; font-weight: bold;">${worker.name}</td>
                 <td style="padding: 8px;">${daysPresent} days</td>
-                <td style="padding: 8px;">₹${totalBaseEarned}</td>
-                <td style="padding: 8px; color: green;">+ ₹${totalOT}</td>
-                <td style="padding: 8px; color: red;">- ₹${totalAdvance}</td>
-                <td style="padding: 8px; font-weight: bold; background: #f1f8e9;">₹${netPayout}</td>
+                <td style="padding: 8px; color: green; font-weight: bold;">数值 ₹${totalGross}</td>
+                <td style="padding: 8px; color: #dc3545;">₹${totalAdvances}</td>
+                <td style="padding: 8px; color: #0d47a1; font-weight: bold;">₹${totalSettlements}</td>
+                <td style="padding: 8px; font-weight: bold; background: ${netBalance <= 0 ? '#e8f5e9' : '#fffde7'}; color: ${netBalance <= 0 ? 'green' : '#b71c1c'};">
+                    ₹${netBalance} ${netBalance <= 0 ? '✓ Cleared' : ''}
+                </td>
             </tr>
         `;
     });
@@ -137,80 +250,66 @@ function buildSalaryTable(filteredRecords) {
     return tableHtml;
 }
 
-// 1. ENGINE FOR THE MONTHLY SELECTOR
-async function calculateMonthlySalary() {
-    const container = document.getElementById('salaryTableContainer');
-    const selectedMonthStr = document.getElementById('salaryMonth').value;
-    
-    if (!selectedMonthStr) return;
-    container.innerHTML = '<p style="color: gray; font-style: italic;">Fetching monthly logs...</p>';
-
-    const { data: history, error } = await _supabase.from('attendance_history').select('*');
-    if (error) {
-        container.innerHTML = `<p style="color: red;">Error: ${error.message}</p>`;
+// 3. ENGINE FOR LOWER MASTER LEDGER VIEW
+function renderPayoutLedger(payouts) {
+    const container = document.getElementById('payoutHistoryLog');
+    if(payouts.length === 0) {
+        container.innerHTML = '<p style="color: gray; font-style: italic;">No payment logs recorded yet.</p>';
         return;
     }
 
-    const [year, month] = selectedMonthStr.split('-');
-    const mInt = parseInt(month, 10);
-    const yInt = parseInt(year, 10);
+    let html = '<div style="font-size:13px; line-height:1.5;">';
+    payouts.forEach(p => {
+        let dateLabel = new Date(p.created_at).toLocaleDateString();
+        let timeLabel = new Date(p.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+        let badgeColor = p.type === "Advance" ? "#dc3545" : "#0d47a1";
 
-    const monthlyRecords = history.filter(record => {
-        if (!record.date) return false;
-        const d = new Date(record.date);
-        return d.getMonth() + 1 === mInt && d.getFullYear() === yInt;
+        html += `
+            <div style="padding: 8px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                    <strong>${dateLabel} (${timeLabel})</strong> - 
+                    <span style="color:#333; font-weight:bold;">${p.name}</span> received 
+                    <strong style="color:green; font-size:14px;">₹${p.amount}</strong> 
+                    <span style="font-size:11px; padding:2px 6px; color:white; background:${badgeColor}; border-radius:3px; margin-left:5px; font-weight:bold;">${p.type.toUpperCase()}</span>
+                    ${p.notes ? `<br><small style="color:gray;">Notes: ${p.notes}</small>` : ''}
+                </div>
+            </div>
+        `;
     });
-
-    if (monthlyRecords.length === 0) {
-        container.innerHTML = '<p style="color: gray; font-style: italic;">No records found for this month.</p>';
-        return;
-    }
-
-    container.innerHTML = buildSalaryTable(monthlyRecords);
+    html += '</div>';
+    container.innerHTML = html;
 }
 
-// 2. ENGINE FOR THE CUSTOM DATE RANGE CALENDAR PICKERS
-async function calculateRangeSalary() {
-    const container = document.getElementById('rangeSalaryTableContainer');
-    const startRaw = document.getElementById('rangeStart').value;
-    const endRaw = document.getElementById('rangeEnd').value;
+// FORM ACTION SUBMISSION: SAVE TO CLOUD LEDGER
+async function savePayout(e) {
+    e.preventDefault();
     
-    if (!startRaw || !endRaw) return;
-
-    // Convert date picker string selections into valid timestamp metrics
-    const startDate = new Date(startRaw);
-    startDate.setHours(0,0,0,0);
+    const workerSelect = document.getElementById('payoutWorker');
+    const selectedOpt = workerSelect.options[workerSelect.selectedIndex];
     
-    const endDate = new Date(endRaw);
-    endDate.setHours(23,59,59,999);
+    const labourid = workerSelect.value;
+    const name = selectedOpt.getAttribute('data-name');
+    const amount = parseFloat(document.getElementById('payoutAmount').value);
+    const type = document.getElementById('payoutType').value;
+    const notes = document.getElementById('payoutNotes').value;
 
-    if (startDate > endDate) {
-        container.innerHTML = '<p style="color: red; font-weight:bold;">Error: "From Date" cannot be after "To Date".</p>';
-        return;
+    const { error } = await _supabase
+        .from('workshop_payouts')
+        .insert([{ labourid, name, amount, type, notes }]);
+
+    if(error) {
+        alert("Cloud Error Saving Receipt: " + error.message);
+    } else {
+        document.getElementById('payoutAmount').value = "";
+        document.getElementById('payoutNotes').value = "";
+        // Refresh calculations instantly on page
+        refreshAllSalaryData();
     }
-
-    container.innerHTML = '<p style="color: gray; font-style: italic;">Calculating custom range layout profiles...</p>';
-
-    const { data: history, error } = await _supabase.from('attendance_history').select('*');
-    if (error) {
-        container.innerHTML = `<p style="color: red;">Error: ${error.message}</p>`;
-        return;
-    }
-
-    // Filter cloud logs running strictly within the picked window bounds
-    const rangedRecords = history.filter(record => {
-        if (!record.date) return false;
-        const recordDate = new Date(record.date);
-        return recordDate >= startDate && recordDate <= endDate;
-    });
-
-    if (rangedRecords.length === 0) {
-        container.innerHTML = '<p style="color: gray; font-style: italic;">No records matched this specific range window.</p>';
-        return;
-    }
-
-    container.innerHTML = buildSalaryTable(rangedRecords);
 }
+
+// Wire change listeners to live triggers
+function calculateMonthlySalary() { refreshAllSalaryData(); }
+function calculateRangeSalary() { refreshAllSalaryData(); }
 </script>
 
 </body>
