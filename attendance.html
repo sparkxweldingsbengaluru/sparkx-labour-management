@@ -36,7 +36,6 @@
             </select>
             <br><br>
 
-            <!-- This wrapper box lets us hide/show all time fields together instantly -->
             <div id="timeFieldsWrapper">
                 <label>In Time</label><br>
                 <select id="inTime">
@@ -94,7 +93,6 @@ labourList.forEach(w => {
     selectEl.appendChild(opt);
 });
 
-// Populates 12-hour AM/PM dropdown items
 function populateTimeDropdowns() {
     const inTimeSelect = document.getElementById('inTime');
     const outTimeSelect = document.getElementById('outTime');
@@ -121,7 +119,6 @@ function populateTimeDropdowns() {
 }
 populateTimeDropdowns();
 
-// NEW: Smart Visibility Toggle & Auto-Fill Logic
 function toggleTimeFields() {
     const status = document.getElementById('attendanceStatus').value;
     const wrapper = document.getElementById('timeFieldsWrapper');
@@ -131,7 +128,6 @@ function toggleTimeFields() {
 
     if (status === "Absent") {
         wrapper.style.display = "none";
-        // Clear timing metrics if absent so old calculations don't bleed through
         inTime.value = "";
         outTime.value = "";
         otAmount.value = "0";
@@ -139,14 +135,13 @@ function toggleTimeFields() {
         outTime.removeAttribute('required');
     } else {
         wrapper.style.display = "block";
-        // Pre-fill standard shift hours: 9:00 AM to 6:00 PM
-        inTime.value = "9:00 AM";
-        outTime.value = "6:00 PM";
+        // Updated: Pre-fill standard shift hours to 8:00 AM and 5:00 PM
+        inTime.value = "8:00 AM";
+        outTime.value = "5:00 PM";
         inTime.setAttribute('required', 'required');
         outTime.setAttribute('required', 'required');
     }
 }
-// Run once on load to ensure defaults lock in place
 toggleTimeFields();
 
 function renderRecentEntries() {
@@ -204,7 +199,7 @@ document.getElementById('attendanceForm').addEventListener('submit', function(e)
 
     alert("Attendance saved successfully!");
     this.reset();
-    toggleTimeFields(); // Snap back elements to default view states
+    toggleTimeFields(); 
     renderRecentEntries();
 });
 
