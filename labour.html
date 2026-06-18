@@ -3,11 +3,12 @@
 <head>
     <title>Sparkx Labour Management</title>
     <link rel="stylesheet" href="style.css">
+    <!-- Links your app to the free global Supabase engine -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
 
 <div class="container">
-    <h1>Sparkx Labour Management</h1>
     <div class="menu">
         <a href="dashboard.html">🏠 Dashboard</a>
         <a href="labour.html">👷 Labour</a>
@@ -16,88 +17,164 @@
         <a href="reports.html">📄 Reports</a>
         <a href="index.html">Logout</a>
     </div>
+      
+    <h1>Sparkx Welding and Fabrications Bengaluru</h1>
+    <h2>Labour Directory (Cloud Database Sync)</h2>
 
     <div class="login-box">
-        <h2 id="form-title">Add Labour</h2>
-        <input type="hidden" id="labourId">
-        <input id="labourName" placeholder="Labour Name"><br><br>
-        <input id="dailyWage" type="number" placeholder="Daily Wage"><br><br>
-        <button id="submitBtn" onclick="saveLabour()">Add Labour</button>
-        <button id="cancelBtn" onclick="resetForm()" style="display:none; background:#6c757d; margin-left:5px;">Cancel</button>
+        <form id="labourForm">
+            <input type="hidden" id="editLabourId">
+            
+            <label>Worker Full Name</label><br>
+            <input type="text" id="labourName" placeholder="Enter name" required>
+            <br><br>
 
-        <hr style="margin: 20px 0;">
-        <h2>Labour List</h2>
-        <div id="labourContainer"></div>
+            <label>Daily Base Wage (₹)</label><br>
+            <input type="number" id="labourWage" placeholder="e.g. 1200" required>
+            <br><br>
+
+            <button type="submit" id="saveBtn">ADD NEW WORKER</button>
+            <button type="button" id="cancelBtn" onclick="resetForm()" style="background: #6c757d; display: none; margin-top: 5px;">Cancel Edit</button>
+        </form>
+
+        <hr style="margin: 25px 0;">
+        
+        <h3>Registered Workers</h3>
+        <div id="labourListContainer">
+            <p style="color: gray; font-style: italic;">Loading cloud registry records...</p>
+        </div>
     </div>
 </div>
 
 <script>
-const defaultLabour = [{ id: "1", name: "Javed", wage: 1300 }, { id: "2", name: "Arbaj", wage: 1000 }];
-let labourList = JSON.parse(localStorage.getItem('labourList')) || defaultLabour;
+// Cloud Database Connection Keys
+const SUPABASE_URL = "https://fjzqscohyteznkehiqnf.supabase.co"; 
+// ⚠️ Paste your long key from your settings screen between these quotes:
+const SUPABASE_KEY = "sb_publishable_ER-PXAe4A1vsLDYETL4BKw_G7p24kTE"; 
 
-function renderLabourList() {
-    const container = document.getElementById('labourContainer');
-    container.innerHTML = '';
-    labourList.forEach((worker, index) => {
-        const div = document.createElement('div');
-        div.innerHTML = `
-            <h3>${worker.name}</h3>
-            <p>Daily Wage: ₹${worker.wage}</p>
-            <button onclick="editLabour('${worker.id}')">Edit</button>
-            <button onclick="deleteLabour('${worker.id}')" style="background:#dc3545; margin-left:5px;">Delete</button>
-            ${index < labourList.length - 1 ? '<hr style="margin:15px 0; border:0; border-top:1px dashed #ccc;">' : ''}
+const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+window.onload = function() {
+    fetchLabourList();
+};
+
+async function fetchLabourList() {
+    const container = document.getElementById('labourListContainer');
+    container.innerHTML = '<p style="color: gray; font-style: italic;">Fetching records from cloud...</p>';
+
+    const { data: workers, error } = await _supabase
+        .from('labour_list')
+        .select('*')
+        .order('name', { ascending: true });
+
+    if (error) {
+        container.innerHTML = `<p style="color: red;">Cloud Error: ${error.message}</p>`;
+        return;
+    }
+
+    // Keep local storage updated simultaneously as a backup cache for dropdown menus
+    localStorage.setItem('labourList', JSON.stringify(workers));
+
+    if (!workers || workers.length === 0) {
+        container.innerHTML = '<p style="color: gray; font-style: italic;">No workers registered yet.</p>';
+        return;
+    }
+
+    let html = '';
+    workers.forEach(w => {
+        html += `
+            <div style="padding: 10px; border: 1px solid #eee; margin-bottom: 8px; border-radius: 6px; background: #fafafa; display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                    <strong style="font-size: 15px; color: #333;">${w.name}</strong><br>
+                    <small style="color: #666;">Base Wage: ₹${w.wage} / day</small>
+                </div>
+                <div>
+                    <button onclick="editLabour('${w.id}', '${w.name}', ${w.wage})" style="background: #ffc107; color: black; padding: 4px 10px; font-size: 12px; width: auto; display: inline-block; margin-right: 5px;">Edit</button>
+                    <button onclick="deleteLabour('${w.id}', '${w.name}')" style="background: #dc3545; padding: 4px 10px; font-size: 12px; width: auto; display: inline-block;">Delete</button>
+                </div>
+            </div>
         `;
-        container.appendChild(div);
     });
-    localStorage.setItem('labourList', JSON.stringify(labourList));
+    container.innerHTML = html;
 }
 
-function saveLabour() {
-    const id = document.getElementById('labourId').value;
+document.getElementById('labourForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    const saveBtn = document.getElementById('saveBtn');
+    const editId = document.getElementById('editLabourId').value;
     const name = document.getElementById('labourName').value.trim();
-    const wage = parseInt(document.getElementById('dailyWage').value);
+    const wage = parseFloat(document.getElementById('labourWage').value);
 
-    if(!name || isNaN(wage)) return alert("Please fill both fields!");
+    saveBtn.disabled = true;
+    saveBtn.textContent = "SAVING TO CLOUD...";
 
-    if(id) {
-        let index = labourList.findIndex(w => w.id === id);
-        if(index !== -1) { labourList[index].name = name; labourList[index].wage = wage; }
+    if (editId) {
+        // Updating an existing worker row
+        const { error } = await _supabase
+            .from('labour_list')
+            .update({ name: name, wage: wage })
+            .eq('id', editId);
+
+        if (error) {
+            alert("Update failed: " + error.message);
+        } else {
+            alert("Worker profile updated successfully!");
+            resetForm();
+        }
     } else {
-        labourList.push({ id: Date.now().toString(), name: name, wage: wage });
+        // Adding a completely new worker row
+        const newId = "LAB_" + Date.now();
+        const { error } = await _supabase
+            .from('labour_list')
+            .insert([{ id: newId, name: name, wage: wage }]);
+
+        if (error) {
+            alert("Failed to add worker: " + error.message);
+        } else {
+            alert("New worker saved to cloud directory!");
+            resetForm();
+        }
     }
-    renderLabourList();
-    resetForm();
+
+    saveBtn.disabled = false;
+    fetchLabourList();
+});
+
+function editLabour(id, name, wage) {
+    document.getElementById('editLabourId').value = id;
+    document.getElementById('labourName').value = name;
+    document.getElementById('labourWage').value = wage;
+    
+    const saveBtn = document.getElementById('saveBtn');
+    saveBtn.textContent = "UPDATE WORKER DETAILS";
+    saveBtn.style.background = "#28a745";
+    document.getElementById('cancelBtn').style.display = "inline-block";
 }
 
-function editLabour(id) {
-    let worker = labourList.find(w => w.id === id);
-    if(worker) {
-        document.getElementById('labourId').value = worker.id;
-        document.getElementById('labourName').value = worker.name;
-        document.getElementById('dailyWage').value = worker.wage;
-        document.getElementById('form-title').textContent = "Edit Labour Details";
-        document.getElementById('submitBtn').textContent = "Update Details";
-        document.getElementById('cancelBtn').style.display = "inline-block";
-    }
-}
+async function deleteLabour(id, name) {
+    if (confirm(`Are you sure you want to delete ${name} from the database?`)) {
+        const { error } = await _supabase
+            .from('labour_list')
+            .delete()
+            .eq('id', id);
 
-function deleteLabour(id) {
-    if(confirm("Delete this profile?")) {
-        labourList = labourList.filter(w => w.id !== id);
-        renderLabourList();
-        resetForm();
+        if (error) {
+            alert("Deletion failed: " + error.message);
+        } else {
+            fetchLabourList();
+        }
     }
 }
 
 function resetForm() {
-    document.getElementById('labourId').value = '';
-    document.getElementById('labourName').value = '';
-    document.getElementById('dailyWage').value = '';
-    document.getElementById('form-title').textContent = "Add Labour";
-    document.getElementById('submitBtn').textContent = "Add Labour";
+    document.getElementById('editLabourId').value = "";
+    document.getElementById('labourForm').reset();
+    
+    const saveBtn = document.getElementById('saveBtn');
+    saveBtn.textContent = "ADD NEW WORKER";
+    saveBtn.style.background = "#0d47a1";
     document.getElementById('cancelBtn').style.display = "none";
 }
-renderLabourList();
 </script>
 
 </body>
