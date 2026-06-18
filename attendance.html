@@ -139,6 +139,7 @@ function toggleTimeFields() {
     }
 }
 
+// Fixed to use lowercase parameters matching database columns
 async function renderRecentEntries() {
     const container = document.getElementById('recentEntriesContainer');
     const titleEl = document.getElementById('recentTitle');
@@ -173,15 +174,16 @@ async function renderRecentEntries() {
         div.style.padding = "5px 0";
         div.innerHTML = `
             <p style="margin: 5px 0; font-size: 14px;"><strong>${record.name}</strong> - <span style="font-weight:bold; color:${record.status === 'Present' ? 'green' : 'red'};">${record.status}</span><br>
-            ${record.status === 'Present' ? `<small style="color: #666;">In: ${record.inTime} | Out: ${record.outTime}</small><br>` : ''}
-            <small style="color:#333;">(OT: ₹${record.otAmount}, Adv: ₹${record.advance})</small></p>
-            <button onclick="deleteAttendance('${record.entryId}')" style="background:#dc3545; padding: 3px 8px; font-size: 11px; width: auto; display: inline-block; margin-bottom:5px;">Delete Entry</button>
+            ${record.status === 'Present' ? `<small style="color: #666;">In: ${record.intime} | Out: ${record.outtime}</small><br>` : ''}
+            <small style="color:#333;">(OT: ₹${record.otamount}, Adv: ₹${record.advance})</small></p>
+            <button onclick="deleteAttendance('${record.entryid}')" style="background:#dc3545; padding: 3px 8px; font-size: 11px; width: auto; display: inline-block; margin-bottom:5px;">Delete Entry</button>
             <hr style="margin: 5px 0; border: 0; border-top: 1px dashed #ddd;">
         `;
         container.appendChild(div);
     });
 }
 
+// Fixed to match database lowercase schema format
 document.getElementById('attendanceForm').addEventListener('submit', async function(e) {
     e.preventDefault();
     const saveBtn = document.getElementById('saveBtn');
@@ -198,15 +200,15 @@ document.getElementById('attendanceForm').addEventListener('submit', async funct
     let finalSavedDateStr = new Date(y, m - 1, d).toLocaleDateString();
     
     let record = {
-        entryId: "ATT_" + Date.now() + "_" + Math.floor(Math.random() * 1000),
+        entryid: "ATT_" + Date.now() + "_" + Math.floor(Math.random() * 1000),
         date: finalSavedDateStr,
-        labourId: worker.id,
+        labourid: worker.id,
         name: worker.name,
-        wageAtTime: worker.wage,
+        wageattime: worker.wage,
         status: status,
-        inTime: status === "Present" ? document.getElementById('inTime').value : "--",
-        outTime: status === "Present" ? document.getElementById('outTime').value : "--",
-        otAmount: status === "Present" ? (parseFloat(document.getElementById('otAmount').value) || 0) : 0,
+        intime: status === "Present" ? document.getElementById('inTime').value : "--",
+        outtime: status === "Present" ? document.getElementById('outTime').value : "--",
+        otamount: status === "Present" ? (parseFloat(document.getElementById('otAmount').value) || 0) : 0,
         advance: parseFloat(document.getElementById('advanceAmount').value) || 0
     };
 
@@ -230,7 +232,7 @@ window.deleteAttendance = async function(targetEntryId) {
         const { error } = await _supabase
             .from('attendance_history')
             .delete()
-            .eq('entryId', targetEntryId);
+            .eq('entryid', targetEntryId);
 
         if (error) {
             alert("Delete failed: " + error.message);
