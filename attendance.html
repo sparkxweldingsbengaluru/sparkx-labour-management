@@ -3,6 +3,8 @@
 <head>
     <title>Sparkx Attendance</title>
     <link rel="stylesheet" href="style.css">
+    <!-- Links your app to the free global Supabase engine -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
 
@@ -17,7 +19,7 @@
     </div>
       
     <h1>Sparkx Welding and Fabrications Bengaluru</h1>
-    <h2>Attendance Entry</h2>
+    <h2>Attendance Entry (Cloud Database Sync)</h2>
 
     <div class="login-box">
         <label style="font-weight: bold; color: #0d47a1;">Attendance Date</label><br>
@@ -38,15 +40,11 @@
 
             <div id="timeFieldsWrapper">
                 <label>In Time</label><br>
-                <select id="inTime">
-                    <option value="">-- Select In Time --</option>
-                </select>
+                <select id="inTime"><option value="">-- Select In Time --</option></select>
                 <br><br>
 
                 <label>Out Time</label><br>
-                <select id="outTime">
-                    <option value="">-- Select Out Time --</option>
-                </select>
+                <select id="outTime"><option value="">-- Select Out Time --</option></select>
                 <br><br>
 
                 <label>OT Amount</label><br>
@@ -58,20 +56,26 @@
             <input type="number" id="advanceAmount" placeholder="₹" value="0">
             <br><br>
 
-            <button type="submit">SAVE ATTENDANCE</button>
+            <button type="submit" id="saveBtn">SAVE TO CLOUD</button>
         </form>
 
         <hr style="margin: 20px 0;">
         
-        <h3 id="recentTitle">Recent Entries</h3>
+        <h3 id="recentTitle">Entries for this Date</h3>
         <div id="recentEntriesContainer" style="max-height: 220px; overflow-y: auto; border: 1px solid #eee; padding: 10px; border-radius: 8px; background: #fafafa;">
-            <p style="color: gray; font-style: italic;">No entries made for this date yet.</p>
+            <p style="color: gray; font-style: italic;">Loading cloud database records...</p>
         </div>
     </div>
 </div>
 
 <script>
-// Automatically set the calendar input to today's date on page load
+// Cloud Database Connection Keys
+const SUPABASE_URL = "https://fjzqscohyteznkehiqnf.supabase.co"; 
+// ⚠️ Paste your long key from Screenshot (8).png between these quotes:
+const SUPABASE_KEY = "sb_publishable_ER-PXAe4A1vsLDYETL4BKw_G7p24kTE"; 
+
+const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
 window.onload = function() {
     let today = new Date();
     let yyyy = today.getFullYear();
@@ -108,15 +112,12 @@ function populateTimeDropdowns() {
         for (let h = 1; h <= 12; h++) {
             minutes.forEach(m => {
                 let timeString = `${h}:${m} ${period}`;
-                
                 let optIn = document.createElement('option');
-                optIn.value = timeString;
-                optIn.textContent = timeString;
+                optIn.value = timeString; optIn.textContent = timeString;
                 inTimeSelect.appendChild(optIn);
 
                 let optOut = document.createElement('option');
-                optOut.value = timeString;
-                optOut.textContent = timeString;
+                optOut.value = timeString; optOut.textContent = timeString;
                 outTimeSelect.appendChild(optOut);
             });
         }
@@ -126,75 +127,73 @@ function populateTimeDropdowns() {
 function toggleTimeFields() {
     const status = document.getElementById('attendanceStatus').value;
     const wrapper = document.getElementById('timeFieldsWrapper');
-    const inTime = document.getElementById('inTime');
-    const outTime = document.getElementById('outTime');
-    const otAmount = document.getElementById('otAmount');
-
     if (status === "Absent") {
         wrapper.style.display = "none";
-        inTime.value = "";
-        outTime.value = "";
-        otAmount.value = "0";
-        inTime.removeAttribute('required');
-        outTime.removeAttribute('required');
+        document.getElementById('inTime').value = "";
+        document.getElementById('outTime').value = "";
+        document.getElementById('otAmount').value = "0";
     } else {
         wrapper.style.display = "block";
-        inTime.value = "8:00 AM";
-        outTime.value = "5:00 PM";
-        inTime.setAttribute('required', 'required');
-        outTime.setAttribute('required', 'required');
+        document.getElementById('inTime').value = "8:00 AM";
+        document.getElementById('outTime').value = "5:00 PM";
     }
 }
 
-// Fixed Date Rendering: Converts raw browser picker value to match historical arrays
-function renderRecentEntries() {
+async function renderRecentEntries() {
     const container = document.getElementById('recentEntriesContainer');
     const titleEl = document.getElementById('recentTitle');
     const selectedRawDate = document.getElementById('attendanceDate').value;
     
     if(!selectedRawDate) return;
 
-    // Convert YYYY-MM-DD to standard browser local string format for cross-matching
     const [y, m, d] = selectedRawDate.split('-');
     let targetDateStr = new Date(y, m - 1, d).toLocaleDateString();
-
     titleEl.textContent = `Entries for ${targetDateStr}`;
     
-    let history = JSON.parse(localStorage.getItem('attendanceHistory')) || [];
+    container.innerHTML = '<p style="color: gray; font-style: italic;">Fetching records from cloud...</p>';
+
+    const { data: history, error } = await _supabase
+        .from('attendance_history')
+        .select('*')
+        .eq('date', targetDateStr);
+
+    if (error) {
+        container.innerHTML = `<p style="color: red;">Cloud Error: ${error.message}</p>`;
+        return;
+    }
+
     container.innerHTML = '';
-    
-    let matchesTarget = history.filter(r => r.date === targetDateStr);
-    
-    if (matchesTarget.length === 0) {
+    if (!history || history.length === 0) {
         container.innerHTML = '<p style="color: gray; font-style: italic;">No entries made for this date yet.</p>';
         return;
     }
     
     history.forEach(record => {
-        if (record.date === targetDateStr) {
-            let div = document.createElement('div');
-            div.style.padding = "5px 0";
-            div.innerHTML = `
-                <p style="margin: 5px 0; font-size: 14px;"><strong>${record.name}</strong> - <span style="font-weight:bold; color:${record.status === 'Present' ? 'green' : 'red'};">${record.status}</span><br>
-                ${record.status === 'Present' ? `<small style="color: #666;">In: ${record.inTime} | Out: ${record.outTime}</small><br>` : ''}
-                <small style="color:#333;">(OT: ₹${record.otAmount}, Adv: ₹${record.advance})</small></p>
-                <button onclick="deleteAttendance('${record.entryId}')" style="background:#dc3545; padding: 3px 8px; font-size: 11px; width: auto; display: inline-block; margin-bottom:5px;">Delete Entry</button>
-                <hr style="margin: 5px 0; border: 0; border-top: 1px dashed #ddd;">
-            `;
-            container.appendChild(div);
-        }
+        let div = document.createElement('div');
+        div.style.padding = "5px 0";
+        div.innerHTML = `
+            <p style="margin: 5px 0; font-size: 14px;"><strong>${record.name}</strong> - <span style="font-weight:bold; color:${record.status === 'Present' ? 'green' : 'red'};">${record.status}</span><br>
+            ${record.status === 'Present' ? `<small style="color: #666;">In: ${record.inTime} | Out: ${record.outTime}</small><br>` : ''}
+            <small style="color:#333;">(OT: ₹${record.otAmount}, Adv: ₹${record.advance})</small></p>
+            <button onclick="deleteAttendance('${record.entryId}')" style="background:#dc3545; padding: 3px 8px; font-size: 11px; width: auto; display: inline-block; margin-bottom:5px;">Delete Entry</button>
+            <hr style="margin: 5px 0; border: 0; border-top: 1px dashed #ddd;">
+        `;
+        container.appendChild(div);
     });
 }
 
-document.getElementById('attendanceForm').addEventListener('submit', function(e) {
+document.getElementById('attendanceForm').addEventListener('submit', async function(e) {
     e.preventDefault();
+    const saveBtn = document.getElementById('saveBtn');
     if(!selectEl.value) return alert("Please select a worker first!");
     
+    saveBtn.disabled = true;
+    saveBtn.textContent = "SAVING TO CLOUD...";
+
     let worker = labourList.find(w => w.id === selectEl.value);
     let status = document.getElementById('attendanceStatus').value;
     let selectedRawDate = document.getElementById('attendanceDate').value;
     
-    // Save records based exactly on what date is picked in the calendar box
     const [y, m, d] = selectedRawDate.split('-');
     let finalSavedDateStr = new Date(y, m - 1, d).toLocaleDateString();
     
@@ -211,26 +210,33 @@ document.getElementById('attendanceForm').addEventListener('submit', function(e)
         advance: parseFloat(document.getElementById('advanceAmount').value) || 0
     };
 
-    let history = JSON.parse(localStorage.getItem('attendanceHistory')) || [];
-    history.push(record);
-    localStorage.setItem('attendanceHistory', JSON.stringify(history));
+    const { error } = await _supabase.from('attendance_history').insert([record]);
 
-    alert("Attendance saved successfully!");
-    
-    // Custom reset that keeps your chosen date active instead of wiping it
-    document.getElementById('labourSelect').value = "";
-    document.getElementById('attendanceStatus').value = "Present";
-    document.getElementById('advanceAmount').value = "0";
-    toggleTimeFields(); 
-    renderRecentEntries();
+    if (error) {
+        alert("Failed to save to cloud: " + error.message);
+    } else {
+        alert("Attendance synced with Cloud successfully!");
+        document.getElementById('labourSelect').value = "";
+        document.getElementById('advanceAmount').value = "0";
+        toggleTimeFields(); 
+        renderRecentEntries();
+    }
+    saveBtn.disabled = false;
+    saveBtn.textContent = "SAVE TO CLOUD";
 });
 
-window.deleteAttendance = function(targetEntryId) {
-    if (confirm("Are you sure you want to delete this attendance entry?")) {
-        let history = JSON.parse(localStorage.getItem('attendanceHistory')) || [];
-        history = history.filter(record => record.entryId !== targetEntryId);
-        localStorage.setItem('attendanceHistory', JSON.stringify(history));
-        renderRecentEntries();
+window.deleteAttendance = async function(targetEntryId) {
+    if (confirm("Are you sure you want to delete this attendance entry from the cloud?")) {
+        const { error } = await _supabase
+            .from('attendance_history')
+            .delete()
+            .eq('entryId', targetEntryId);
+
+        if (error) {
+            alert("Delete failed: " + error.message);
+        } else {
+            renderRecentEntries();
+        }
     }
 }
 </script>
