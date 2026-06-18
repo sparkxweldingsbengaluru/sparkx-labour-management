@@ -1,90 +1,104 @@
 <!DOCTYPE html>
 <html>
-
 <head>
-<title>Sparkx Labour Management</title>
-<link rel="stylesheet" href="style.css">
+    <title>Sparkx Labour Management</title>
+    <link rel="stylesheet" href="style.css">
 </head>
-
-
 <body>
 
 <div class="container">
+    <h1>Sparkx Labour Management</h1>
+    <div class="menu">
+        <a href="dashboard.html">🏠 Dashboard</a>
+        <a href="labour.html">👷 Labour</a>
+        <a href="attendance.html">📅 Attendance</a>
+        <a href="salary.html">💰 Salary</a>
+        <a href="reports.html">📄 Reports</a>
+        <a href="index.html">Logout</a>
+    </div>
 
+    <div class="login-box">
+        <h2 id="form-title">Add Labour</h2>
+        <input type="hidden" id="labourId">
+        <input id="labourName" placeholder="Labour Name"><br><br>
+        <input id="dailyWage" type="number" placeholder="Daily Wage"><br><br>
+        <button id="submitBtn" onclick="saveLabour()">Add Labour</button>
+        <button id="cancelBtn" onclick="resetForm()" style="display:none; background:#6c757d; margin-left:5px;">Cancel</button>
 
-<h1>Sparkx Labour Management</h1>
-
-
-<div class="menu">
-
-<a href="dashboard.html">🏠 Dashboard</a>
-
-<a href="attendance.html">📅 Attendance</a>
-
-<a href="salary.html">💰 Salary</a>
-
-<a href="reports.html">📄 Reports</a>
-
-<a href="index.html">Logout</a>
-
+        <hr style="margin: 20px 0;">
+        <h2>Labour List</h2>
+        <div id="labourContainer"></div>
+    </div>
 </div>
 
+<script>
+const defaultLabour = [{ id: "1", name: "Javed", wage: 1300 }, { id: "2", name: "Arbaj", wage: 1000 }];
+let labourList = JSON.parse(localStorage.getItem('labourList')) || defaultLabour;
 
-<div class="login-box">
+function renderLabourList() {
+    const container = document.getElementById('labourContainer');
+    container.innerHTML = '';
+    labourList.forEach((worker, index) => {
+        const div = document.createElement('div');
+        div.innerHTML = `
+            <h3>${worker.name}</h3>
+            <p>Daily Wage: ₹${worker.wage}</p>
+            <button onclick="editLabour('${worker.id}')">Edit</button>
+            <button onclick="deleteLabour('${worker.id}')" style="background:#dc3545; margin-left:5px;">Delete</button>
+            ${index < labourList.length - 1 ? '<hr style="margin:15px 0; border:0; border-top:1px dashed #ccc;">' : ''}
+        `;
+        container.appendChild(div);
+    });
+    localStorage.setItem('labourList', JSON.stringify(labourList));
+}
 
+function saveLabour() {
+    const id = document.getElementById('labourId').value;
+    const name = document.getElementById('labourName').value.trim();
+    const wage = parseInt(document.getElementById('dailyWage').value);
 
-<h2>Labour List</h2>
+    if(!name || isNaN(wage)) return alert("Please fill both fields!");
 
+    if(id) {
+        let index = labourList.findIndex(w => w.id === id);
+        if(index !== -1) { labourList[index].name = name; labourList[index].wage = wage; }
+    } else {
+        labourList.push({ id: Date.now().toString(), name: name, wage: wage });
+    }
+    renderLabourList();
+    resetForm();
+}
 
-<h3>Javed</h3>
+function editLabour(id) {
+    let worker = labourList.find(w => w.id === id);
+    if(worker) {
+        document.getElementById('labourId').value = worker.id;
+        document.getElementById('labourName').value = worker.name;
+        document.getElementById('dailyWage').value = worker.wage;
+        document.getElementById('form-title').textContent = "Edit Labour Details";
+        document.getElementById('submitBtn').textContent = "Update Details";
+        document.getElementById('cancelBtn').style.display = "inline-block";
+    }
+}
 
-<p>Daily Wage: ₹1300</p>
+function deleteLabour(id) {
+    if(confirm("Delete this profile?")) {
+        labourList = labourList.filter(w => w.id !== id);
+        renderLabourList();
+        resetForm();
+    }
+}
 
-<button>Edit</button>
-
-<button>Delete</button>
-
-
-<hr>
-
-
-<h3>Arbaj</h3>
-
-<p>Daily Wage: ₹1000</p>
-
-<button>Edit</button>
-
-<button>Delete</button>
-
-
-<hr>
-
-
-<h2>Add Labour</h2>
-
-
-<input placeholder="Labour Name">
-
-
-<br>
-
-
-<input type="number" placeholder="Daily Wage">
-
-
-<br><br>
-
-
-<button>
-Add Labour
-</button>
-
-
-</div>
-
-
-</div>
+function resetForm() {
+    document.getElementById('labourId').value = '';
+    document.getElementById('labourName').value = '';
+    document.getElementById('dailyWage').value = '';
+    document.getElementById('form-title').textContent = "Add Labour";
+    document.getElementById('submitBtn').textContent = "Add Labour";
+    document.getElementById('cancelBtn').style.display = "none";
+}
+renderLabourList();
+</script>
 
 </body>
-
 </html>
