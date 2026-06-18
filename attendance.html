@@ -1,118 +1,105 @@
 <!DOCTYPE html>
 <html>
-
 <head>
-<title>Sparkx Attendance</title>
-<link rel="stylesheet" href="style.css">
+    <title>Sparkx Attendance</title>
+    <link rel="stylesheet" href="style.css">
 </head>
-
 <body>
 
 <div class="container">
+    <div class="menu">
+        <a href="dashboard.html">🏠 Dashboard</a>
+        <a href="labour.html">👷 Labour</a>
+        <a href="attendance.html">📅 Attendance</a>
+        <a href="salary.html">💰 Salary</a>
+        <a href="reports.html">📄 Reports</a>
+        <a href="index.html">Logout</a>
+    </div>
+      
+    <h1>Sparkx Welding and Fabrications Bengaluru</h1>
+    <h2>Attendance Entry</h2>
 
-<div class="menu">
+    <div class="login-box">
+        <h3 id="date"></h3>
+        <h3 id="clock"></h3>
+        <hr>
 
-<a href="dashboard.html">🏠 Dashboard</a>
+        <form id="attendanceForm">
+            <label>Select Labour</label><br>
+            <select id="labourSelect" required><option value="">-- Choose Worker --</option></select>
+            <br><br>
 
-<a href="labour.html">👷 Labour</a>
+            <label>Attendance</label><br>
+            <select id="attendanceStatus">
+                <option value="Present">Present</option>
+                <option value="Absent">Absent</option>
+            </select>
+            <br><br>
 
-<a href="attendance.html">📅 Attendance</a>
+            <label>In Time</label><br>
+            <input type="time" id="inTime">
+            <br><br>
 
-<a href="salary.html">💰 Salary</a>
+            <label>Out Time</label><br>
+            <input type="time" id="outTime">
+            <br><br>
 
-<a href="reports.html">📄 Reports</a>
+            <label>OT Amount</label><br>
+            <input type="number" id="otAmount" placeholder="₹" value="0">
+            <br><br>
 
-<a href="index.html">Logout</a>
+            <label>Advance</label><br>
+            <input type="number" id="advanceAmount" placeholder="₹" value="0">
+            <br><br>
 
+            <button type="submit">SAVE ATTENDANCE</button>
+        </form>
+    </div>
 </div>
-  
-<h1>Sparkx Welding and Fabrications Bengaluru</h1>
-
-<h2>Attendance Entry</h2>
-
-<div class="login-box">
-
-<h3 id="date"></h3>
-<h3 id="clock"></h3>
-
-<hr>
-
-<label>Select Labour</label>
-<br>
-
-<select>
-<option>Javed</option>
-<option>Arbaj</option>
-</select>
-
-<br><br>
-
-<label>Attendance</label>
-<br>
-
-<select>
-<option>Present</option>
-<option>Absent</option>
-</select>
-
-<br><br>
-
-<label>In Time</label>
-<br>
-
-<input type="time">
-
-<br><br>
-
-<label>Out Time</label>
-<br>
-
-<input type="time">
-
-<br><br>
-
-<label>OT Amount</label>
-<br>
-
-<input type="number" placeholder="₹">
-
-<br><br>
-
-<label>Advance</label>
-<br>
-
-<input type="number" placeholder="₹">
-
-<br><br>
-
-<button>SAVE ATTENDANCE</button>
-
-</div>
-
-</div>
-
 
 <script>
-
 function clock(){
-
-let now=new Date();
-
-document.getElementById("date").innerHTML=
-now.toDateString();
-
-document.getElementById("clock").innerHTML=
-now.toLocaleTimeString();
-
+    let now = new Date();
+    document.getElementById("date").innerHTML = now.toDateString();
+    document.getElementById("clock").innerHTML = now.toLocaleTimeString();
 }
-
-setInterval(clock,1000);
-
+setInterval(clock, 1000);
 clock();
 
+let labourList = JSON.parse(localStorage.getItem('labourList')) || [{ id: "1", name: "Javed", wage: 1300 }, { id: "2", name: "Arbaj", wage: 1000 }];
+const selectEl = document.getElementById('labourSelect');
+
+labourList.forEach(w => {
+    let opt = document.createElement('option');
+    opt.value = w.id;
+    opt.textContent = w.name;
+    selectEl.appendChild(opt);
+});
+
+document.getElementById('attendanceForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    let worker = labourList.find(w => w.id === selectEl.value);
+    
+    let record = {
+        date: new Date().toLocaleDateString(),
+        labourId: worker.id,
+        name: worker.name,
+        wageAtTime: worker.wage, // Saves wage as history safely (Option A)
+        status: document.getElementById('attendanceStatus').value,
+        inTime: document.getElementById('inTime').value,
+        outTime: document.getElementById('outTime').value,
+        otAmount: parseFloat(document.getElementById('otAmount').value) || 0,
+        advance: parseFloat(document.getElementById('advanceAmount').value) || 0
+    };
+
+    let history = JSON.parse(localStorage.getItem('attendanceHistory')) || [];
+    history.push(record);
+    localStorage.setItem('attendanceHistory', JSON.stringify(history));
+
+    alert("Attendance saved successfully!");
+    this.reset();
+});
 </script>
 
-
 </body>
-
 </html>
