@@ -1,88 +1,67 @@
 <!DOCTYPE html>
 <html>
-
 <head>
     <title>Sparkx Dashboard</title>
     <link rel="stylesheet" href="style.css">
 </head>
-
 <body>
 
 <div class="container">
-<div class="menu">
+    <div class="menu">
+        <a href="dashboard.html">🏠 Dashboard</a>
+        <a href="labour.html">👷 Labour</a>
+        <a href="attendance.html">📅 Attendance</a>
+        <a href="salary.html">💰 Salary</a>
+        <a href="reports.html">📄 Reports</a>
+        <a href="index.html">Logout</a>
+    </div>
 
-<a href="dashboard.html">🏠 Dashboard</a>
+    <h1>Sparkx Welding and Fabrications Bengaluru</h1>
+    <h2>Labour Management Dashboard</h2>
 
-<a href="labour.html">👷 Labour</a>
-
-<a href="attendance.html">📅 Attendance</a>
-
-<a href="salary.html">💰 Salary</a>
-
-<a href="reports.html">📄 Reports</a>
-
-<a href="index.html">Logout</a>
-
+    <div class="login-box">
+        <h3 id="date"></h3>
+        <h3 id="clock"></h3>
+        <hr>
+        <h2>👷 Labour Summary</h2>
+        <div id="labourSummaryList"></div>
+        <hr>
+        <h2>Quick Actions</h2>
+        <button onclick="window.location.href='attendance.html'">Attendance</button>
+        <br><br>
+        <button onclick="window.location.href='salary.html'">Salary</button>
+        <br><br>
+        <button onclick="window.location.href='reports.html'">Reports</button>
+    </div>
 </div>
-<h1>Sparkx Welding and Fabrications Bengaluru</h1>
-
-<h2>Labour Management Dashboard</h2>
-
-<div class="login-box">
-
-<h3 id="date"></h3>
-<h3 id="clock"></h3>
-
-<hr>
-
-<h2>👷 Labour Summary</h2>
-
-<p>Javed - ₹1300/day</p>
-<p>Arbaj - ₹1000/day</p>
-
-<hr>
-
-<h2>Quick Actions</h2>
-
-<button onclick="window.location.href='attendance.html'">
-Attendance
-</button>
-<br><br>
-
-<button onclick="window.location.href='salary.html'">
-Salary
-</button>
-<br><br>
-
-<button onclick="window.location.href='reports.html'">
-Reports
-</button>
-
-</div>
-
-</div>
-
 
 <script>
-
 function showTime(){
-
-let now = new Date();
-
-document.getElementById("date").innerHTML =
-now.toDateString();
-
-document.getElementById("clock").innerHTML =
-now.toLocaleTimeString();
-
+    let now = new Date();
+    document.getElementById("date").innerHTML = now.toDateString();
+    document.getElementById("clock").innerHTML = now.toLocaleTimeString();
 }
-
 setInterval(showTime,1000);
-
 showTime();
 
+// Automatically loads saved workers
+function loadDashboardSummary() {
+    const defaultLabour = [
+        { id: "1", name: "Javed", wage: 1300 },
+        { id: "2", name: "Arbaj", wage: 1000 }
+    ];
+    let labourList = JSON.parse(localStorage.getItem('labourList')) || defaultLabour;
+    const container = document.getElementById('labourSummaryList');
+    container.innerHTML = '';
+    
+    labourList.forEach(worker => {
+        let p = document.createElement('p');
+        p.textContent = `${worker.name} - ₹${worker.wage}/day`;
+        container.appendChild(p);
+    });
+}
+loadDashboardSummary();
 </script>
-
 
 </body>
 </html>
