@@ -67,7 +67,6 @@ async function loadDashboardMetrics() {
     
     if(workers) document.getElementById('metricTotalWorkers').textContent = workers.length;
 
-    // Format today as MM/DD/YYYY for comparison
     let now = new Date();
     let todayStr = (now.getMonth()+1).toString().padStart(2,'0') + '/' + now.getDate().toString().padStart(2,'0') + '/' + now.getFullYear();
     let currentMonth = now.getMonth() + 1;
@@ -107,18 +106,27 @@ async function loadDailyHistory() {
     const container = document.getElementById('dailyHistoryContainer');
     const selectedRawDate = document.getElementById('historyFilterDate').value; 
     
-    // Convert YYYY-MM-DD to MM/DD/YYYY
+    if(!selectedRawDate) return;
+
+    // Convert YYYY-MM-DD to MM/DD/YYYY to match Supabase
     const [y, m, d] = selectedRawDate.split('-');
     const targetDateStr = `${m}/${d}/${y}`;
 
-    container.innerHTML = `<p style="color: gray;">Loading logs for ${targetDateStr}...</p>`;
+    container.innerHTML = `<p style="color: gray;">Searching logs for ${targetDateStr}...</p>`;
 
-    const { data: dailyRecords, error } = await _supabase
+    // Fetch all records and filter locally to ensure match
+    const { data: allRecords, error } = await _supabase
         .from('attendance_history')
-        .select('*')
-        .eq('date', targetDateStr);
+        .select('*');
 
-    if (error || !dailyRecords || dailyRecords.length === 0) {
+    if (error) {
+        container.innerHTML = `<p style="color: red;">Error: ${error.message}</p>`;
+        return;
+    }
+
+    const dailyRecords = allRecords.filter(r => r.date && r.date.trim() === targetDateStr);
+
+    if (dailyRecords.length === 0) {
         container.innerHTML = `<p style="color: #666;">No logs found for ${targetDateStr}.</p>`;
         return;
     }
