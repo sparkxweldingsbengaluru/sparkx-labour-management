@@ -22,7 +22,7 @@
         <a href="reports.html">📄 Reports</a>
         <a href="index.html">Logout</a>
     </div>
-      
+    
     <h1>Sparkx Welding and Fabrications Bengaluru</h1>
 
     <div class="full-width-container">
@@ -44,7 +44,10 @@
             <input type="hidden" id="editingPayoutId">
             <select id="payoutWorker" required></select>
             <input type="number" id="payoutAmount" placeholder="Amount (₹)" required step="any">
-            <select id="payoutType"><option value="Final Settlement">Final Settlement</option><option value="Advance">Advance</option></select>
+            <select id="payoutType">
+                <option value="Final Settlement">Final Settlement</option>
+                <option value="Advances">Advances</option>
+            </select>
             <input type="text" id="payoutNotes" placeholder="Remarks">
             <button type="submit" id="submitPayoutBtn">SAVE PAYOUT</button>
             <button type="button" id="cancelEditBtn" onclick="clearPayoutForm()" style="display:none;">Cancel</button>
@@ -62,7 +65,7 @@
             </select>
             <select id="filterType" onchange="refreshAllSalaryData()">
                 <option value="All">All Types</option>
-                <option value="Advance">Advance</option>
+                <option value="Advances">Advances</option>
                 <option value="Final Settlement">Final Settlement</option>
             </select>
         </div>
@@ -124,7 +127,7 @@ function generateTable(attRows, payRows) {
         const wAtt = attRows.filter(r => r.labourid == w.id && r.status == "Present");
         const wPay = payRows.filter(p => p.labourid == w.id);
         const gross = wAtt.reduce((sum, r) => sum + (parseFloat(r.wageattime)||w.wage) + (parseFloat(r.otamount)||0), 0);
-        const totalAdvances = wAtt.reduce((sum, r) => sum + (parseFloat(r.advance)||0), 0) + wPay.filter(p => p.type == "Advance").reduce((s, p) => s + parseFloat(p.amount), 0);
+        const totalAdvances = wAtt.reduce((sum, r) => sum + (parseFloat(r.advance)||0), 0) + wPay.filter(p => p.type && p.type.toLowerCase().includes("advance")).reduce((s, p) => s + parseFloat(p.amount), 0);
         const totalSettlements = wPay.filter(p => p.type == "Final Settlement").reduce((s, p) => s + parseFloat(p.amount), 0);
         const net = gross - totalAdvances - totalSettlements;
         html += `<tr><td>${w.name}</td><td>₹${gross}</td><td>₹${totalAdvances}</td><td>₹${totalSettlements}</td><td style="font-weight:bold; color:${net<0?'red':'green'}">₹${net}</td></tr>`;
@@ -146,7 +149,8 @@ function renderPaidDetails(pay) {
         const pDate = new Date(p.created_at);
         const matchesDate = pDate >= startDate && pDate <= endDate;
         const matchesWorker = (selectedWorker === "All" || (p.name && p.name.trim() === selectedWorker.trim()));
-        const matchesType = (selectedType === "All" || (p.type && p.type.trim() === selectedType.trim()));
+        // Flexible matching for Advance/Advances
+        const matchesType = (selectedType === "All" || (p.type && (p.type.trim() === selectedType.trim() || (selectedType === "Advances" && p.type.toLowerCase().includes("advance")))));
         return matchesDate && matchesWorker && matchesType;
     });
 
