@@ -2,187 +2,76 @@
 <html>
 <head>
     <title>Sparkx Salary Management</title>
-    <link rel="stylesheet" href="style.css">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
-        .full-width-container { width: 100%; margin-bottom: 30px; padding: 20px; border: 1px solid #ddd; border-radius: 8px; background: #fff; }
-        table { width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 14px; }
-        th, td { padding: 12px; border: 1px solid #ddd; text-align: left; }
-        th { background-color: #333; color: white; }
+        body { font-family: sans-serif; padding: 20px; background: #f4f4f4; }
+        .container { max-width: 1200px; margin: auto; }
+        .full-width-container { background: #fff; padding: 20px; margin-bottom: 20px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        th, td { padding: 10px; border: 1px solid #ddd; text-align: left; }
+        th { background: #333; color: #fff; }
     </style>
 </head>
 <body>
-
 <div class="container">
-    <div class="menu">
-        <a href="dashboard.html">🏠 Dashboard</a>
-        <a href="labour.html">👷 Labour</a>
-        <a href="attendance.html">📅 Attendance</a>
-        <a href="salary.html">💰 Salary</a>
-        <a href="reports.html">📄 Reports</a>
-        <a href="index.html">Logout</a>
-    </div>
-    
-    <h1>Sparkx Welding and Fabrications Bengaluru</h1>
-
+    <h1>Sparkx Management Dashboard</h1>
     <div class="full-width-container">
-        <h2>Table 1: Complete Monthly Salary</h2>
-        <input type="month" id="salaryMonth" onchange="refreshAllSalaryData()">
-        <div id="salaryTableContainer"></div>
+        <h3>Global Filters</h3>
+        Month: <input type="month" id="filterMonth" onchange="refreshDashboard()">
+        From: <input type="date" id="filterStart" onchange="refreshDashboard()">
+        To: <input type="date" id="filterEnd" onchange="refreshDashboard()">
     </div>
 
-    <div class="full-width-container">
-        <h2>Table 2: Custom Date Range Earnings</h2>
-        From: <input type="date" id="rangeStart" onchange="refreshAllSalaryData()">
-        To: <input type="date" id="rangeEnd" onchange="refreshAllSalaryData()">
-        <div id="rangeSalaryTableContainer"></div>
-    </div>
-
-    <div class="full-width-container" style="border-top: 4px solid #b71c1c;">
-        <h2>Table 3: Record a Cash Payout / Settlement</h2>
-        <form id="payoutForm" onsubmit="handleFormSubmission(event)">
-            <input type="hidden" id="editingPayoutId">
-            <select id="payoutWorker" required></select>
-            <input type="number" id="payoutAmount" placeholder="Amount (₹)" required step="any">
-            <select id="payoutType">
-                <option value="Final Settlement">Final Settlement</option>
-                <option value="Advances">Advances</option>
-            </select>
-            <input type="text" id="payoutNotes" placeholder="Remarks">
-            <button type="submit" id="submitPayoutBtn">SAVE PAYOUT</button>
-            <button type="button" id="cancelEditBtn" onclick="clearPayoutForm()" style="display:none;">Cancel</button>
-        </form>
-        <div id="payoutHistoryLog" style="margin-top:20px;"></div>
-    </div>
-
-    <div class="full-width-container" style="border-top: 4px solid #ff9100;">
-        <h2>Table 4: Custom Range Salary Paid Details (Ledger View)</h2>
-        <div style="margin-bottom: 15px; display: flex; gap: 10px; flex-wrap: wrap;">
-            <input type="date" id="paidStart" onchange="refreshAllSalaryData()">
-            <input type="date" id="paidEnd" onchange="refreshAllSalaryData()">
-            <select id="filterWorker" onchange="refreshAllSalaryData()">
-                <option value="All">All Workers</option>
-            </select>
-            <select id="filterType" onchange="refreshAllSalaryData()">
-                <option value="All">All Types</option>
-                <option value="Advances">Advances</option>
-                <option value="Final Settlement">Final Settlement</option>
-            </select>
-        </div>
-        <div id="rangePaidDetailsContainer"></div>
+    <div id="tableContainer">
+        <div class="full-width-container" id="section1"><h2>Monthly Ledger</h2><div id="div1"></div></div>
+        <div class="full-width-container" id="section2"><h2>Date Range Earnings</h2><div id="div2"></div></div>
+        <div class="full-width-container" id="section4"><h2>Paid Details (Ledger View)</h2><div id="div4"></div></div>
     </div>
 </div>
 
 <script>
-const SUPABASE_URL = "https://fjzqscohyteznkehiqnf.supabase.co"; 
-const SUPABASE_KEY = "sb_publishable_ER-PXAe4A1vsLDYETL4BKw_G7p24kTE"; 
-const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-let labourList = JSON.parse(localStorage.getItem('labourList')) || [{id: "1", name: "Javed", wage: 1300}, {id: "2", name: "Arbaj", wage: 1000}];
+const _supabase = supabase.createClient("https://fjzqscohyteznkehiqnf.supabase.co", "sb_publishable_ER-PXAe4A1vsLDYETL4BKw_G7p24kTE");
+let appData = { attendance: [], payouts: [] };
+let labourList = [{id: "1", name: "Javed", wage: 1300}, {id: "2", name: "Arbaj", wage: 1000}];
 
-window.onload = function() {
-    let today = new Date().toISOString().split('T')[0];
-    let month = today.substring(0, 7);
-    document.getElementById('salaryMonth').value = month;
-    document.getElementById('rangeStart').value = month + "-01";
-    document.getElementById('rangeEnd').value = today;
-    document.getElementById('paidStart').value = month + "-01";
-    document.getElementById('paidEnd').value = today;
-    
-    const dropdown = document.getElementById('payoutWorker');
-    const workerFilter = document.getElementById('filterWorker');
-    labourList.forEach(w => {
-        dropdown.innerHTML += `<option value="${w.id}" data-name="${w.name}">${w.name}</option>`;
-        workerFilter.innerHTML += `<option value="${w.name}">${w.name}</option>`;
-    });
-    refreshAllSalaryData();
-};
-
-async function refreshAllSalaryData() {
+async function refreshDashboard() {
     const { data: att } = await _supabase.from('attendance_history').select('*');
-    const { data: pay } = await _supabase.from('workshop_payouts').select('*').order('created_at', { ascending: false });
+    const { data: pay } = await _supabase.from('workshop_payouts').select('*');
     
-    // We use the same 'pay' data for all tables to ensure consistency
-    renderMonthly(att || [], pay || []);
-    renderRangeEarnings(att || [], pay || []);
-    renderPaidDetails(pay || []);
-    renderMasterLedger(pay || []);
+    // 1. NORMALIZATION: Fix spelling/types here once
+    appData.attendance = att || [];
+    appData.payouts = (pay || []).map(p => ({
+        ...p,
+        cleanType: p.type.toLowerCase().includes('advance') ? 'Advances' : 'Final Settlement',
+        dateObj: new Date(p.created_at)
+    }));
+    renderAll();
 }
 
-function renderMonthly(att, pay) {
-    const [y, m] = document.getElementById('salaryMonth').value.split('-');
-    const filteredAtt = att.filter(r => new Date(r.date).getMonth()+1 == m && new Date(r.date).getFullYear() == y);
-    const filteredPay = pay.filter(p => new Date(p.created_at).getMonth()+1 == m && new Date(p.created_at).getFullYear() == y);
-    document.getElementById('salaryTableContainer').innerHTML = generateTable(filteredAtt, filteredPay);
-}
-
-function renderRangeEarnings(att, pay) {
-    const start = new Date(document.getElementById('rangeStart').value);
-    const end = new Date(document.getElementById('rangeEnd').value);
-    const filteredAtt = att.filter(r => new Date(r.date) >= start && new Date(r.date) <= end);
-    const filteredPay = pay.filter(p => new Date(p.created_at) >= start && new Date(p.created_at) <= end);
-    document.getElementById('rangeSalaryTableContainer').innerHTML = generateTable(filteredAtt, filteredPay);
-}
-
-function generateTable(attRows, payRows) {
-    let html = `<table><tr><th>Name</th><th>Gross</th><th>Advances</th><th>Settlements</th><th>Net</th></tr>`;
-    labourList.forEach(w => {
-        const wAtt = attRows.filter(r => r.labourid == w.id && r.status == "Present");
-        const wPay = payRows.filter(p => p.labourid == w.id);
-        const gross = wAtt.reduce((sum, r) => sum + (parseFloat(r.wageattime)||w.wage) + (parseFloat(r.otamount)||0), 0);
-        const totalAdvances = wAtt.reduce((sum, r) => sum + (parseFloat(r.advance)||0), 0) + wPay.filter(p => p.type && p.type.toLowerCase().includes("advance")).reduce((s, p) => s + parseFloat(p.amount), 0);
-        const totalSettlements = wPay.filter(p => p.type == "Final Settlement").reduce((s, p) => s + parseFloat(p.amount), 0);
-        const net = gross - totalAdvances - totalSettlements;
-        html += `<tr><td>${w.name}</td><td>₹${gross}</td><td>₹${totalAdvances}</td><td>₹${totalSettlements}</td><td style="font-weight:bold; color:${net<0?'red':'green'}">₹${net}</td></tr>`;
-    });
-    return html + `</table>`;
-}
-
-function renderPaidDetails(pay) {
-    const startStr = document.getElementById('paidStart').value;
-    const endStr = document.getElementById('paidEnd').value;
-    const startDate = new Date(startStr);
-    const endDate = new Date(endStr);
-    endDate.setHours(23, 59, 59, 999);
+function renderAll() {
+    const start = new Date(document.getElementById('filterStart').value);
+    const end = new Date(document.getElementById('filterEnd').value);
     
-    const selectedWorker = document.getElementById('filterWorker').value;
-    const selectedType = document.getElementById('filterType').value;
-
-    const filtered = pay.filter(p => {
-        const pDate = new Date(p.created_at);
-        const matchesDate = pDate >= startDate && pDate <= endDate;
-        const matchesWorker = (selectedWorker === "All" || (p.name && p.name.trim() === selectedWorker.trim()));
-        const matchesType = (selectedType === "All" || (p.type && (selectedType === "Advances" ? p.type.toLowerCase().includes("advance") : p.type.trim() === selectedType.trim())));
-        return matchesDate && matchesWorker && matchesType;
+    // Shared Logic: Filter data based on range
+    const filteredPay = appData.payouts.filter(p => p.dateObj >= start && p.dateObj <= end);
+    
+    // Render Table 4 (The Ledger View)
+    let html4 = `<table><tr><th>Date</th><th>Name</th><th>Type</th><th>Amount</th></tr>`;
+    let total = 0;
+    filteredPay.forEach(p => {
+        total += parseFloat(p.amount) || 0;
+        html4 += `<tr><td>${p.dateObj.toLocaleDateString()}</td><td>${p.name}</td><td>${p.cleanType}</td><td>₹${p.amount}</td></tr>`;
     });
-
-    const grouped = filtered.reduce((acc, p) => { if(!acc[p.name]) acc[p.name] = []; acc[p.name].push(p); return acc; }, {});
-    let html = `<div style="margin-top: 15px;">`;
-    let grandTotal = 0;
-    for (const worker in grouped) {
-        let workerTotal = 0;
-        html += `<h3>${worker}</h3><table><tr><th>Date</th><th>Type</th><th>Notes</th><th>Amount</th></tr>`;
-        grouped[worker].forEach(p => { let amt = parseFloat(p.amount) || 0; workerTotal += amt; grandTotal += amt; html += `<tr><td>${new Date(p.created_at).toLocaleDateString()}</td><td>${p.type}</td><td>${p.notes||'-'}</td><td style="font-weight:bold;">₹${amt.toLocaleString()}</td></tr>`; });
-        html += `<tr style="background:#e8f5e9;"><td colspan="3" style="text-align:right;">Subtotal for ${worker}:</td><td style="font-weight:bold;">₹${workerTotal.toLocaleString()}</td></tr></table>`;
-    }
-    html += `<div style="background:#333; color:white; padding:15px; text-align:right; font-size:18px; border-radius:4px;">GRAND TOTAL PAID: <strong>₹${grandTotal.toLocaleString()}</strong></div></div>`;
-    document.getElementById('rangePaidDetailsContainer').innerHTML = html;
+    html4 += `<tr><td colspan="3" style="text-align:right"><b>GRAND TOTAL</b></td><td><b>₹${total}</b></td></tr></table>`;
+    document.getElementById('div4').innerHTML = html4;
 }
 
-function renderMasterLedger(pay) {
-    document.getElementById('payoutHistoryLog').innerHTML = pay.map(p => `
-        <div style="border-bottom:1px solid #eee; padding:8px; display:flex; justify-content:space-between; align-items:center;">
-            <div><strong>${new Date(p.created_at).toLocaleDateString()}</strong> - ${p.name}: ₹${p.amount} (${p.type})</div>
-            <div>
-                <button onclick='editPayout(${JSON.stringify(p).replace(/'/g, "&apos;")})' style="background:#0288d1; color:white; border:none; padding:3px 8px; cursor:pointer;">EDIT</button>
-                <button onclick='deletePayout("${p.id}")' style="background:#d32f2f; color:white; border:none; padding:3px 8px; cursor:pointer; margin-left:5px;">DELETE</button>
-            </div>
-        </div>`).join('');
-}
-
-async function deletePayout(id) { if (confirm("Delete this record?")) { await _supabase.from('workshop_payouts').delete().eq('id', id); refreshAllSalaryData(); } }
-function editPayout(p) { document.getElementById('editingPayoutId').value = p.id; document.getElementById('payoutWorker').value = p.labourid; document.getElementById('payoutAmount').value = p.amount; document.getElementById('payoutType').value = p.type; document.getElementById('payoutNotes').value = p.notes || ""; document.getElementById('submitPayoutBtn').innerHTML = "UPDATE"; document.getElementById('cancelEditBtn').style.display = "inline"; }
-function clearPayoutForm() { document.getElementById('editingPayoutId').value = ""; document.getElementById('submitPayoutBtn').innerHTML = "SAVE PAYOUT"; document.getElementById('cancelEditBtn').style.display = "none"; }
-async function handleFormSubmission(e) { e.preventDefault(); const id = document.getElementById('editingPayoutId').value; const data = { labourid: document.getElementById('payoutWorker').value, name: document.getElementById('payoutWorker').options[document.getElementById('payoutWorker').selectedIndex].text, amount: parseFloat(document.getElementById('payoutAmount').value), type: document.getElementById('payoutType').value, notes: document.getElementById('payoutNotes').value }; if(id) await _supabase.from('workshop_payouts').update(data).eq('id', id); else await _supabase.from('workshop_payouts').insert([data]); refreshAllSalaryData(); clearPayoutForm(); document.getElementById('payoutAmount').value = ""; }
+window.onload = () => {
+    let today = new Date();
+    document.getElementById('filterStart').value = new Date(today.getFullYear(), today.getMonth(), 1).toISOString().split('T')[0];
+    document.getElementById('filterEnd').value = today.toISOString().split('T')[0];
+    refreshDashboard();
+};
 </script>
 </body>
 </html>
