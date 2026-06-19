@@ -25,14 +25,12 @@
       
     <h1>Sparkx Welding and Fabrications Bengaluru</h1>
 
-    <!-- TABLE 1 -->
     <div class="full-width-container">
         <h2>Table 1: Complete Monthly Salary</h2>
         <input type="month" id="salaryMonth" onchange="refreshAllSalaryData()">
         <div id="salaryTableContainer"></div>
     </div>
 
-    <!-- TABLE 2 -->
     <div class="full-width-container">
         <h2>Table 2: Custom Date Range Earnings</h2>
         From: <input type="date" id="rangeStart" onchange="refreshAllSalaryData()">
@@ -40,7 +38,6 @@
         <div id="rangeSalaryTableContainer"></div>
     </div>
 
-    <!-- TABLE 3: PAYOUT ENTRY -->
     <div class="full-width-container" style="border-top: 4px solid #b71c1c;">
         <h2 id="formTitle">Table 3: Record a Cash Payout / Settlement</h2>
         <form id="payoutForm" onsubmit="handleFormSubmission(event)">
@@ -55,9 +52,8 @@
         <div id="payoutHistoryLog" style="margin-top:20px;"></div>
     </div>
 
-    <!-- TABLE 4: PAID DETAILS -->
     <div class="full-width-container" style="border-top: 4px solid #ff9100;">
-        <h2>Table 4: Custom Range Salary Paid Details</h2>
+        <h2>Table 4: Custom Range Salary Paid Details (Ledger View)</h2>
         From: <input type="date" id="paidStart" onchange="refreshAllSalaryData()">
         To: <input type="date" id="paidEnd" onchange="refreshAllSalaryData()">
         <div id="rangePaidDetailsContainer"></div>
@@ -115,17 +111,10 @@ function generateTable(attRows, payRows) {
     labourList.forEach(w => {
         const wAtt = attRows.filter(r => r.labourid == w.id && r.status == "Present");
         const wPay = payRows.filter(p => p.labourid == w.id);
-        
         const gross = wAtt.reduce((sum, r) => sum + (parseFloat(r.wageattime)||w.wage) + (parseFloat(r.otamount)||0), 0);
-        
-        // Combined Advances from Attendance AND Payouts
-        const attAdvances = wAtt.reduce((sum, r) => sum + (parseFloat(r.advance)||0), 0);
-        const payoutAdvances = wPay.filter(p => p.type == "Advance").reduce((sum, p) => sum + parseFloat(p.amount), 0);
-        const totalAdvances = attAdvances + payoutAdvances;
-        
-        const totalSettlements = wPay.filter(p => p.type == "Final Settlement").reduce((sum, p) => sum + parseFloat(p.amount), 0);
+        const totalAdvances = wAtt.reduce((sum, r) => sum + (parseFloat(r.advance)||0), 0) + wPay.filter(p => p.type == "Advance").reduce((s, p) => s + parseFloat(p.amount), 0);
+        const totalSettlements = wPay.filter(p => p.type == "Final Settlement").reduce((s, p) => s + parseFloat(p.amount), 0);
         const net = gross - totalAdvances - totalSettlements;
-        
         html += `<tr><td>${w.name}</td><td>₹${gross}</td><td>₹${totalAdvances}</td><td>₹${totalSettlements}</td><td style="font-weight:bold; color:${net<0?'red':'green'}">₹${net}</td></tr>`;
     });
     return html + `</table>`;
@@ -135,8 +124,16 @@ function renderPaidDetails(pay) {
     const start = new Date(document.getElementById('paidStart').value);
     const end = new Date(document.getElementById('paidEnd').value);
     const filtered = pay.filter(p => new Date(p.created_at) >= start && new Date(p.created_at) <= end);
-    let html = `<table><tr><th>Date</th><th>Name</th><th>Amount</th><th>Type</th></tr>` + 
-               filtered.map(p => `<tr><td>${new Date(p.created_at).toLocaleDateString()}</td><td>${p.name}</td><td>₹${p.amount}</td><td>${p.type}</td></tr>`).join('') + `</table>`;
+    const grouped = filtered.reduce((acc, p) => { if(!acc[p.name]) acc[p.name] = []; acc[p.name].push(p); return acc; }, {});
+    let html = `<div style="margin-top: 15px;">`;
+    let grandTotal = 0;
+    for (const worker in grouped) {
+        let workerTotal = 0;
+        html += `<h3>${worker}</h3><table><tr><th>Date</th><th>Type</th><th>Notes</th><th>Amount</th></tr>`;
+        grouped[worker].forEach(p => { let amt = parseFloat(p.amount); workerTotal += amt; grandTotal += amt; html += `<tr><td>${new Date(p.created_at).toLocaleDateString()}</td><td>${p.type}</td><td>${p.notes||'-'}</td><td style="font-weight:bold;">₹${amt.toLocaleString()}</td></tr>`; });
+        html += `<tr style="background:#e8f5e9;"><td colspan="3" style="text-align:right;">Subtotal for ${worker}:</td><td style="font-weight:bold;">₹${workerTotal.toLocaleString()}</td></tr></table>`;
+    }
+    html += `<div style="background:#333; color:white; padding:15px; text-align:right; font-size:18px; border-radius:4px;">GRAND TOTAL PAID: <strong>₹${grandTotal.toLocaleString()}</strong></div></div>`;
     document.getElementById('rangePaidDetailsContainer').innerHTML = html;
 }
 
@@ -151,47 +148,10 @@ function renderMasterLedger(pay) {
         </div>`).join('');
 }
 
-async function deletePayout(id) {
-    if (confirm("Are you sure you want to permanently delete this record?")) {
-        await _supabase.from('workshop_payouts').delete().eq('id', id);
-        refreshAllSalaryData();
-    }
-}
-
-function editPayout(p) {
-    document.getElementById('editingPayoutId').value = p.id;
-    document.getElementById('payoutWorker').value = p.labourid;
-    document.getElementById('payoutAmount').value = p.amount;
-    document.getElementById('payoutType').value = p.type;
-    document.getElementById('payoutNotes').value = p.notes || "";
-    document.getElementById('submitPayoutBtn').innerHTML = "UPDATE";
-    document.getElementById('cancelEditBtn').style.display = "inline";
-}
-
-function clearPayoutForm() {
-    document.getElementById('editingPayoutId').value = "";
-    document.getElementById('submitPayoutBtn').innerHTML = "SAVE PAYOUT";
-    document.getElementById('cancelEditBtn').style.display = "none";
-}
-
-async function handleFormSubmission(e) {
-    e.preventDefault();
-    const id = document.getElementById('editingPayoutId').value;
-    const data = {
-        labourid: document.getElementById('payoutWorker').value,
-        name: document.getElementById('payoutWorker').options[document.getElementById('payoutWorker').selectedIndex].text,
-        amount: parseFloat(document.getElementById('payoutAmount').value),
-        type: document.getElementById('payoutType').value,
-        notes: document.getElementById('payoutNotes').value
-    };
-    
-    if(id) await _supabase.from('workshop_payouts').update(data).eq('id', id);
-    else await _supabase.from('workshop_payouts').insert([data]);
-    
-    refreshAllSalaryData();
-    clearPayoutForm();
-    document.getElementById('payoutAmount').value = "";
-}
+async function deletePayout(id) { if (confirm("Delete this record?")) { await _supabase.from('workshop_payouts').delete().eq('id', id); refreshAllSalaryData(); } }
+function editPayout(p) { document.getElementById('editingPayoutId').value = p.id; document.getElementById('payoutWorker').value = p.labourid; document.getElementById('payoutAmount').value = p.amount; document.getElementById('payoutType').value = p.type; document.getElementById('payoutNotes').value = p.notes || ""; document.getElementById('submitPayoutBtn').innerHTML = "UPDATE"; document.getElementById('cancelEditBtn').style.display = "inline"; }
+function clearPayoutForm() { document.getElementById('editingPayoutId').value = ""; document.getElementById('submitPayoutBtn').innerHTML = "SAVE PAYOUT"; document.getElementById('cancelEditBtn').style.display = "none"; }
+async function handleFormSubmission(e) { e.preventDefault(); const id = document.getElementById('editingPayoutId').value; const data = { labourid: document.getElementById('payoutWorker').value, name: document.getElementById('payoutWorker').options[document.getElementById('payoutWorker').selectedIndex].text, amount: parseFloat(document.getElementById('payoutAmount').value), type: document.getElementById('payoutType').value, notes: document.getElementById('payoutNotes').value }; if(id) await _supabase.from('workshop_payouts').update(data).eq('id', id); else await _supabase.from('workshop_payouts').insert([data]); refreshAllSalaryData(); clearPayoutForm(); document.getElementById('payoutAmount').value = ""; }
 </script>
 </body>
 </html>
