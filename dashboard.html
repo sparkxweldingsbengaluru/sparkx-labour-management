@@ -68,7 +68,6 @@ async function loadDashboardMetrics() {
     if(workers) document.getElementById('metricTotalWorkers').textContent = workers.length;
 
     let now = new Date();
-    // Match M/D/YYYY database format
     let todayStr = (now.getMonth()+1) + '/' + now.getDate() + '/' + now.getFullYear();
     let currentMonth = now.getMonth() + 1;
     let currentYear = now.getFullYear();
@@ -88,10 +87,8 @@ async function loadDashboardMetrics() {
     labourList.forEach(w => {
         const wAtt = history.filter(r => r.labourid == w.id && r.status == "Present" && new Date(r.date).getMonth()+1 == currentMonth);
         const wPay = pay.filter(p => p.labourid == w.id && new Date(p.created_at).getMonth()+1 == currentMonth);
-        
         const gross = wAtt.reduce((sum, r) => sum + (parseFloat(r.wageattime)||w.wage) + (parseFloat(r.otamount)||0), 0);
-        const adv = wAtt.reduce((sum, r) => sum + (parseFloat(r.advance)||0), 0) + 
-                    wPay.filter(p => p.type == "Advance").reduce((s, p) => s + parseFloat(p.amount), 0);
+        const adv = wAtt.reduce((sum, r) => sum + (parseFloat(r.advance)||0), 0) + wPay.filter(p => p.type == "Advance").reduce((s, p) => s + parseFloat(p.amount), 0);
         const set = wPay.filter(p => p.type == "Final Settlement").reduce((s, p) => s + parseFloat(p.amount), 0);
         grandTotalNet += (gross - adv - set);
     });
@@ -109,33 +106,28 @@ async function loadDailyHistory() {
     
     if(!selectedRawDate) return;
 
-    // Convert YYYY-MM-DD to M/D/YYYY to match Screenshot (16).jpg
     const [y, m, d] = selectedRawDate.split('-');
     const targetDateStr = `${parseInt(m)}/${parseInt(d)}/${y}`;
 
-    container.innerHTML = `<p style="color: gray;">Searching logs for ${targetDateStr}...</p>`;
-
-    const { data: allRecords, error } = await _supabase
-        .from('attendance_history')
-        .select('*');
-
-    if (error) {
-        container.innerHTML = `<p style="color: red;">Error: ${error.message}</p>`;
-        return;
-    }
+    const { data: allRecords, error } = await _supabase.from('attendance_history').select('*');
+    if (error) { container.innerHTML = `<p style="color: red;">Error: ${error.message}</p>`; return; }
 
     const dailyRecords = allRecords.filter(r => r.date && r.date.trim() === targetDateStr);
-
-    if (dailyRecords.length === 0) {
-        container.innerHTML = `<p style="color: #666;">No logs found for ${targetDateStr}.</p>`;
-        return;
-    }
+    if (dailyRecords.length === 0) { container.innerHTML = `<p style="color: #666;">No logs found for ${targetDateStr}.</p>`; return; }
 
     container.innerHTML = '';
     dailyRecords.forEach(row => {
+        let statusColor = row.status === "Present" ? "#28a745" : "#dc3545";
         let card = document.createElement('div');
         card.style.cssText = "padding: 12px; border: 1px solid #e0e0e0; margin-bottom: 10px; border-radius: 6px; background: #fff;";
-        card.innerHTML = `<strong>${row.name}</strong> - ${row.status} (In: ${row.intime}, Out: ${row.outtime})`;
+        card.innerHTML = `
+            <div style="display:flex; justify-content:space-between;">
+                <strong>${row.name}</strong>
+                <span style="color: white; background: ${statusColor}; padding: 2px 8px; border-radius: 4px; font-weight: bold; font-size: 12px;">${row.status}</span>
+            </div>
+            <p style="margin: 5px 0 0 0; font-size: 13px;">In: ${row.intime || '--'} | Out: ${row.outtime || '--'}</p>
+            <p style="margin: 2px 0 0 0; font-size: 13px;">OT: ₹${row.otamount || 0} | Advance: ₹${row.advance || 0}</p>
+        `;
         container.appendChild(card);
     });
 }
