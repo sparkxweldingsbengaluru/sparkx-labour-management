@@ -127,7 +127,11 @@ function generateTable(attRows, payRows) {
         const wAtt = attRows.filter(r => r.labourid == w.id && r.status == "Present");
         const wPay = payRows.filter(p => p.labourid == w.id);
         const gross = wAtt.reduce((sum, r) => sum + (parseFloat(r.wageattime)||w.wage) + (parseFloat(r.otamount)||0), 0);
-        const totalAdvances = wAtt.reduce((sum, r) => sum + (parseFloat(r.advance)||0), 0) + wPay.filter(p => p.type && p.type.toLowerCase().includes("advance")).reduce((s, p) => s + parseFloat(p.amount), 0);
+        
+        // Flexible matching: includes "advance" in any casing
+        const totalAdvances = wAtt.reduce((sum, r) => sum + (parseFloat(r.advance)||0), 0) + 
+                              wPay.filter(p => p.type && p.type.toLowerCase().includes("advance")).reduce((s, p) => s + parseFloat(p.amount), 0);
+        
         const totalSettlements = wPay.filter(p => p.type == "Final Settlement").reduce((s, p) => s + parseFloat(p.amount), 0);
         const net = gross - totalAdvances - totalSettlements;
         html += `<tr><td>${w.name}</td><td>₹${gross}</td><td>₹${totalAdvances}</td><td>₹${totalSettlements}</td><td style="font-weight:bold; color:${net<0?'red':'green'}">₹${net}</td></tr>`;
@@ -149,8 +153,11 @@ function renderPaidDetails(pay) {
         const pDate = new Date(p.created_at);
         const matchesDate = pDate >= startDate && pDate <= endDate;
         const matchesWorker = (selectedWorker === "All" || (p.name && p.name.trim() === selectedWorker.trim()));
-        // Flexible matching for Advance/Advances
-        const matchesType = (selectedType === "All" || (p.type && (p.type.trim() === selectedType.trim() || (selectedType === "Advances" && p.type.toLowerCase().includes("advance")))));
+        
+        // Flexible matching: If "Advances" is selected, match anything containing "advance"
+        const matchesType = (selectedType === "All" || 
+                            (p.type && (selectedType === "Advances" ? p.type.toLowerCase().includes("advance") : p.type.trim() === selectedType.trim())));
+                            
         return matchesDate && matchesWorker && matchesType;
     });
 
