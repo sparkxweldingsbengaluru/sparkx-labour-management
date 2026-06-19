@@ -1,17 +1,21 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
+    <meta charset="UTF-8">
     <title>Sparkx Dashboard</title>
-    <link rel="stylesheet" href="style.css">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
-        .full-width-container { width: 100%; margin-bottom: 20px; padding: 20px; border: 1px solid #ddd; border-radius: 8px; background: #fff; }
-        .menu { background: #0d47a1; padding: 15px; border-radius: 8px; margin-bottom: 20px; text-align: center; }
+        body { font-family: sans-serif; background-color: #f4f7f6; margin: 0; padding: 20px; }
+        .container { max-width: 900px; margin: auto; text-align: center; }
+        .menu { background: #0d47a1; padding: 15px; border-radius: 8px; margin-bottom: 25px; }
         .menu a { color: white; text-decoration: none; font-weight: bold; margin: 0 10px; }
-        .metric-grid { display: flex; gap: 20px; margin-bottom: 20px; }
-        .metric { flex: 1; padding: 20px; color: white; border-radius: 8px; text-align: center; font-weight: bold; }
-        .history-card { border: 1px solid #ddd; padding: 15px; margin-bottom: 10px; border-radius: 5px; display: flex; justify-content: space-between; align-items: center; }
-        .status-badge { background: #c8e6c9; color: #2e7d32; padding: 2px 8px; border-radius: 4px; font-size: 12px; }
+        
+        .stats-row { display: flex; gap: 15px; margin-bottom: 30px; flex-wrap: wrap; }
+        .stat-card { flex: 1; min-width: 180px; padding: 15px; border-radius: 8px; color: white; font-weight: bold; }
+        
+        .work-history { background: white; padding: 20px; border-radius: 8px; border: 1px solid #ddd; max-width: 500px; margin: auto; }
+        .worker-card { padding: 10px; border: 1px solid #ddd; margin-top: 10px; border-radius: 5px; text-align: left; position: relative; }
+        .badge { background: #2e7d32; color: white; padding: 2px 8px; border-radius: 4px; font-size: 11px; float: right; }
     </style>
 </head>
 <body>
@@ -29,46 +33,83 @@
     <h1>Sparkx Welding and Fabrications Bengaluru</h1>
     <h3>Management Dashboard (Cloud Real-Time Metrics)</h3>
 
-    <div class="metric-grid">
-        <div class="metric" style="background: #0d47a1;">TOTAL WORKERS<br><span id="totalWorkers">0</span></div>
-        <div class="metric" style="background: #2e7d32;">PRESENT TODAY<br><span id="presentToday">0</span></div>
-        <div class="metric" style="background: #c62828;">MONTH TOTAL ADVANCES<br>₹<span id="monthAdvances">0</span></div>
-        <div class="metric" style="background: #ef6c00;">MONTH REMAINING PAYMENT<br>₹<span id="remainingPayment">0</span></div>
+    <div class="stats-row">
+        <div class="stat-card" style="background:#0d47a1;">TOTAL WORKERS<br><span id="metricTotalWorkers">0</span></div>
+        <div class="stat-card" style="background:#2e7d32;">PRESENT TODAY<br><span id="metricPresentToday">0</span></div>
+        <div class="stat-card" style="background:#c62828;">MONTH ADVANCES<br><span id="metricMonthAdvance">₹0</span></div>
+        <div class="stat-card" style="background:#ef6c00;">REMAINING PAYMENT<br><span id="totalNetBalance">₹0</span></div>
     </div>
 
-    <div class="full-width-container">
-        <h2>View Daily Work History</h2>
-        <input type="date" id="historyDate" onchange="loadHistory()" style="margin-bottom: 20px; width: 100%; padding: 10px;">
-        <div id="historyContainer"></div>
+    <div class="work-history">
+        <h3>View Daily Work History</h3>
+        <input type="date" id="historyFilterDate" onchange="loadDailyHistory()" style="width: 100%; padding: 8px; margin-bottom: 10px;">
+        <div id="dailyHistoryContainer"></div>
     </div>
 </div>
 
 <script>
 const _supabase = supabase.createClient("https://fjzqscohyteznkehiqnf.supabase.co", "sb_publishable_ER-PXAe4A1vsLDYETL4BKw_G7p24kTE");
 
-window.onload = async function() {
-    document.getElementById('historyDate').value = new Date().toISOString().split('T')[0];
-    loadHistory();
-    // Fetch metrics...
+window.onload = function() {
+    document.getElementById('historyFilterDate').value = new Date().toISOString().split('T')[0];
+    loadDashboardMetrics();
+    loadDailyHistory();
 };
 
-async function loadHistory() {
-    const date = document.getElementById('historyDate').value;
-    const { data: att } = await _supabase.from('attendance_history').select('*').eq('date', date);
+async function loadDashboardMetrics() {
+    const { data: workers } = await _supabase.from('labour_list').select('id');
+    const { data: history } = await _supabase.from('attendance_history').select('*');
+    const { data: pay } = await _supabase.from('workshop_payouts').select('*');
     
-    let html = "";
-    (att || []).forEach(r => {
-        html += `
-        <div class="history-card">
-            <div>
-                <strong>${r.name || 'Worker'}</strong><br>
-                <small>In: ${r.intime || '-'} | Out: ${r.outtime || '-'}</small><br>
-                <small>OT: ₹${r.otamount || 0} | Advance: ₹${r.advance || 0}</small>
-            </div>
-            <div class="status-badge">${r.status || 'Absent'}</div>
-        </div>`;
+    if(workers) document.getElementById('metricTotalWorkers').textContent = workers.length;
+
+    let now = new Date();
+    let currentMonth = now.getMonth() + 1;
+    let currentYear = now.getFullYear();
+
+    // Today's date in 'M/D/YYYY' format for database comparison
+    let todayStr = `${now.getMonth()+1}/${now.getDate()}/${now.getFullYear()}`;
+
+    let presentCount = 0;
+    let monthAdv = 0;
+
+    history.forEach(row => {
+        if (row.date === todayStr && row.status === "Present") presentCount++;
+        let d = new Date(row.date);
+        if (d.getMonth() + 1 === currentMonth && d.getFullYear() === currentYear) {
+            monthAdv += parseFloat(row.advance) || 0;
+        }
     });
-    document.getElementById('historyContainer').innerHTML = html || "<p>No records for this date.</p>";
+
+    document.getElementById('metricPresentToday').textContent = presentCount;
+    document.getElementById('metricMonthAdvance').textContent = "₹" + monthAdv;
+}
+
+async function loadDailyHistory() {
+    const container = document.getElementById('dailyHistoryContainer');
+    const rawDate = document.getElementById('historyFilterDate').value; 
+    if(!rawDate) return;
+
+    const [y, m, d] = rawDate.split('-');
+    const targetDateStr = `${parseInt(m)}/${parseInt(d)}/${y}`;
+
+    container.innerHTML = "Loading...";
+
+    const { data, error } = await _supabase.from('attendance_history').select('*').eq('date', targetDateStr);
+    
+    if (error || !data || data.length === 0) {
+        container.innerHTML = "No logs found for this date.";
+        return;
+    }
+
+    container.innerHTML = data.map(row => `
+        <div class="worker-card">
+            <span class="badge">${row.status}</span>
+            <strong>${row.name}</strong><br>
+            <small>In: ${row.intime || '--'} | Out: ${row.outtime || '--'}</small><br>
+            <small>OT: ₹${row.otamount || 0} | Advance: ₹${row.advance || 0}</small>
+        </div>
+    `).join('');
 }
 </script>
 </body>
