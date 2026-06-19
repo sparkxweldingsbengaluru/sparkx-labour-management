@@ -54,23 +54,6 @@
         </form>
         <div id="payoutHistoryLog" style="margin-top:20px;"></div>
     </div>
-
-    <div class="full-width-container" style="border-top: 4px solid #ff9100;">
-        <h2>Table 4: Custom Range Salary Paid Details (Ledger View)</h2>
-        <div style="margin-bottom: 15px; display: flex; gap: 10px; flex-wrap: wrap;">
-            <input type="date" id="paidStart" onchange="refreshAllSalaryData()">
-            <input type="date" id="paidEnd" onchange="refreshAllSalaryData()">
-            <select id="filterWorker" onchange="refreshAllSalaryData()">
-                <option value="All">All Workers</option>
-            </select>
-            <select id="filterType" onchange="refreshAllSalaryData()">
-                <option value="All">All Types</option>
-                <option value="Advances">Advances</option>
-                <option value="Final Settlement">Final Settlement</option>
-            </select>
-        </div>
-        <div id="rangePaidDetailsContainer"></div>
-    </div>
 </div>
 
 <script>
@@ -85,14 +68,10 @@ window.onload = function() {
     document.getElementById('salaryMonth').value = month;
     document.getElementById('rangeStart').value = month + "-01";
     document.getElementById('rangeEnd').value = today;
-    document.getElementById('paidStart').value = month + "-01";
-    document.getElementById('paidEnd').value = today;
     
     const dropdown = document.getElementById('payoutWorker');
-    const workerFilter = document.getElementById('filterWorker');
     labourList.forEach(w => {
         dropdown.innerHTML += `<option value="${w.id}" data-name="${w.name}">${w.name}</option>`;
-        workerFilter.innerHTML += `<option value="${w.name}">${w.name}</option>`;
     });
     refreshAllSalaryData();
 };
@@ -101,10 +80,8 @@ async function refreshAllSalaryData() {
     const { data: att } = await _supabase.from('attendance_history').select('*');
     const { data: pay } = await _supabase.from('workshop_payouts').select('*').order('created_at', { ascending: false });
     
-    // We use the same 'pay' data for all tables to ensure consistency
     renderMonthly(att || [], pay || []);
     renderRangeEarnings(att || [], pay || []);
-    renderPaidDetails(pay || []);
     renderMasterLedger(pay || []);
 }
 
@@ -135,37 +112,6 @@ function generateTable(attRows, payRows) {
         html += `<tr><td>${w.name}</td><td>₹${gross}</td><td>₹${totalAdvances}</td><td>₹${totalSettlements}</td><td style="font-weight:bold; color:${net<0?'red':'green'}">₹${net}</td></tr>`;
     });
     return html + `</table>`;
-}
-
-function renderPaidDetails(pay) {
-    const startStr = document.getElementById('paidStart').value;
-    const endStr = document.getElementById('paidEnd').value;
-    const startDate = new Date(startStr);
-    const endDate = new Date(endStr);
-    endDate.setHours(23, 59, 59, 999);
-    
-    const selectedWorker = document.getElementById('filterWorker').value;
-    const selectedType = document.getElementById('filterType').value;
-
-    const filtered = pay.filter(p => {
-        const pDate = new Date(p.created_at);
-        const matchesDate = pDate >= startDate && pDate <= endDate;
-        const matchesWorker = (selectedWorker === "All" || (p.name && p.name.trim() === selectedWorker.trim()));
-        const matchesType = (selectedType === "All" || (p.type && (selectedType === "Advances" ? p.type.toLowerCase().includes("advance") : p.type.trim() === selectedType.trim())));
-        return matchesDate && matchesWorker && matchesType;
-    });
-
-    const grouped = filtered.reduce((acc, p) => { if(!acc[p.name]) acc[p.name] = []; acc[p.name].push(p); return acc; }, {});
-    let html = `<div style="margin-top: 15px;">`;
-    let grandTotal = 0;
-    for (const worker in grouped) {
-        let workerTotal = 0;
-        html += `<h3>${worker}</h3><table><tr><th>Date</th><th>Type</th><th>Notes</th><th>Amount</th></tr>`;
-        grouped[worker].forEach(p => { let amt = parseFloat(p.amount) || 0; workerTotal += amt; grandTotal += amt; html += `<tr><td>${new Date(p.created_at).toLocaleDateString()}</td><td>${p.type}</td><td>${p.notes||'-'}</td><td style="font-weight:bold;">₹${amt.toLocaleString()}</td></tr>`; });
-        html += `<tr style="background:#e8f5e9;"><td colspan="3" style="text-align:right;">Subtotal for ${worker}:</td><td style="font-weight:bold;">₹${workerTotal.toLocaleString()}</td></tr></table>`;
-    }
-    html += `<div style="background:#333; color:white; padding:15px; text-align:right; font-size:18px; border-radius:4px;">GRAND TOTAL PAID: <strong>₹${grandTotal.toLocaleString()}</strong></div></div>`;
-    document.getElementById('rangePaidDetailsContainer').innerHTML = html;
 }
 
 function renderMasterLedger(pay) {
