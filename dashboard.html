@@ -34,7 +34,6 @@
             <h3 style="margin: 0; font-size: 14px; text-transform: uppercase; opacity: 0.9;">Month Total Advances</h3>
             <p id="metricMonthAdvance" style="margin: 10px 0 0 0; font-size: 28px; font-weight: bold;">₹0</p>
         </div>
-        <!-- NEW CARD -->
         <div style="flex: 1; min-width: 140px; background: #2e7d32; color: white; padding: 15px; border-radius: 8px; text-align: center;">
             <h3 style="margin: 0; font-size: 14px; text-transform: uppercase; opacity: 0.9;">Month Remaining Payment</h3>
             <p id="totalNetBalance" style="margin: 10px 0 0 0; font-size: 28px; font-weight: bold;">₹0</p>
@@ -68,8 +67,9 @@ async function loadDashboardMetrics() {
     
     if(workers) document.getElementById('metricTotalWorkers').textContent = workers.length;
 
-    let todayStr = new Date().toLocaleDateString();
+    // Format today as MM/DD/YYYY for comparison
     let now = new Date();
+    let todayStr = (now.getMonth()+1).toString().padStart(2,'0') + '/' + now.getDate().toString().padStart(2,'0') + '/' + now.getFullYear();
     let currentMonth = now.getMonth() + 1;
     let currentYear = now.getFullYear();
 
@@ -77,7 +77,6 @@ async function loadDashboardMetrics() {
     let totalMonthlyAdvance = 0;
     let grandTotalNet = 0;
 
-    // Calc metrics
     history.forEach(row => {
         let rowDate = new Date(row.date);
         if (row.date === todayStr && row.status === "Present") presentTodayCount++;
@@ -86,7 +85,6 @@ async function loadDashboardMetrics() {
         }
     });
 
-    // Calc Month Remaining Payment
     labourList.forEach(w => {
         const wAtt = history.filter(r => r.labourid == w.id && r.status == "Present" && new Date(r.date).getMonth()+1 == currentMonth);
         const wPay = pay.filter(p => p.labourid == w.id && new Date(p.created_at).getMonth()+1 == currentMonth);
@@ -106,7 +104,32 @@ async function loadDashboardMetrics() {
 }
 
 async function loadDailyHistory() {
-    // ... (Your existing loadDailyHistory code)
+    const container = document.getElementById('dailyHistoryContainer');
+    const selectedRawDate = document.getElementById('historyFilterDate').value; 
+    
+    // Convert YYYY-MM-DD to MM/DD/YYYY
+    const [y, m, d] = selectedRawDate.split('-');
+    const targetDateStr = `${m}/${d}/${y}`;
+
+    container.innerHTML = `<p style="color: gray;">Loading logs for ${targetDateStr}...</p>`;
+
+    const { data: dailyRecords, error } = await _supabase
+        .from('attendance_history')
+        .select('*')
+        .eq('date', targetDateStr);
+
+    if (error || !dailyRecords || dailyRecords.length === 0) {
+        container.innerHTML = `<p style="color: #666;">No logs found for ${targetDateStr}.</p>`;
+        return;
+    }
+
+    container.innerHTML = '';
+    dailyRecords.forEach(row => {
+        let card = document.createElement('div');
+        card.style.cssText = "padding: 12px; border: 1px solid #e0e0e0; margin-bottom: 10px; border-radius: 6px; background: #fff;";
+        card.innerHTML = `<strong>${row.name}</strong> - ${row.status} (In: ${row.intime}, Out: ${row.outtime})`;
+        container.appendChild(card);
+    });
 }
 </script>
 </body>
