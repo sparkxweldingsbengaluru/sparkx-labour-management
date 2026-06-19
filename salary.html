@@ -39,7 +39,7 @@
     </div>
 
     <div class="full-width-container" style="border-top: 4px solid #b71c1c;">
-        <h2>Table 3: Record a Cash Payout / Settlement</h2>
+        <h2 id="formTitle">Table 3: Record a Cash Payout / Settlement</h2>
         <form id="payoutForm" onsubmit="handleFormSubmission(event)">
             <input type="hidden" id="editingPayoutId">
             <select id="payoutWorker" required></select>
@@ -133,14 +133,17 @@ function generateTable(attRows, payRows) {
 }
 
 function renderPaidDetails(pay) {
-    const startDate = new Date(document.getElementById('paidStart').value);
-    const endDate = new Date(document.getElementById('paidEnd').value);
+    const startStr = document.getElementById('paidStart').value;
+    const endStr = document.getElementById('paidEnd').value;
+    const startDate = new Date(startStr);
+    const endDate = new Date(endStr);
     endDate.setHours(23, 59, 59, 999);
+    
     const selectedWorker = document.getElementById('filterWorker').value;
     const selectedType = document.getElementById('filterType').value;
 
     const filtered = pay.filter(p => {
-        const pDate = p.created_at ? new Date(p.created_at) : new Date(0);
+        const pDate = new Date(p.created_at);
         const matchesDate = pDate >= startDate && pDate <= endDate;
         const matchesWorker = (selectedWorker === "All" || (p.name && p.name.trim() === selectedWorker.trim()));
         const matchesType = (selectedType === "All" || (p.type && p.type.trim() === selectedType.trim()));
@@ -153,7 +156,7 @@ function renderPaidDetails(pay) {
     for (const worker in grouped) {
         let workerTotal = 0;
         html += `<h3>${worker}</h3><table><tr><th>Date</th><th>Type</th><th>Notes</th><th>Amount</th></tr>`;
-        grouped[worker].forEach(p => { let amt = parseFloat(p.amount) || 0; workerTotal += amt; grandTotal += amt; let d = p.created_at ? new Date(p.created_at).toLocaleDateString() : "N/A"; html += `<tr><td>${d}</td><td>${p.type}</td><td>${p.notes||'-'}</td><td style="font-weight:bold;">₹${amt.toLocaleString()}</td></tr>`; });
+        grouped[worker].forEach(p => { let amt = parseFloat(p.amount) || 0; workerTotal += amt; grandTotal += amt; html += `<tr><td>${new Date(p.created_at).toLocaleDateString()}</td><td>${p.type}</td><td>${p.notes||'-'}</td><td style="font-weight:bold;">₹${amt.toLocaleString()}</td></tr>`; });
         html += `<tr style="background:#e8f5e9;"><td colspan="3" style="text-align:right;">Subtotal for ${worker}:</td><td style="font-weight:bold;">₹${workerTotal.toLocaleString()}</td></tr></table>`;
     }
     html += `<div style="background:#333; color:white; padding:15px; text-align:right; font-size:18px; border-radius:4px;">GRAND TOTAL PAID: <strong>₹${grandTotal.toLocaleString()}</strong></div></div>`;
