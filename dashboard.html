@@ -68,7 +68,8 @@ async function loadDashboardMetrics() {
     if(workers) document.getElementById('metricTotalWorkers').textContent = workers.length;
 
     let now = new Date();
-    let todayStr = (now.getMonth()+1).toString().padStart(2,'0') + '/' + now.getDate().toString().padStart(2,'0') + '/' + now.getFullYear();
+    // Match M/D/YYYY database format
+    let todayStr = (now.getMonth()+1) + '/' + now.getDate() + '/' + now.getFullYear();
     let currentMonth = now.getMonth() + 1;
     let currentYear = now.getFullYear();
 
@@ -77,8 +78,8 @@ async function loadDashboardMetrics() {
     let grandTotalNet = 0;
 
     history.forEach(row => {
-        let rowDate = new Date(row.date);
         if (row.date === todayStr && row.status === "Present") presentTodayCount++;
+        let rowDate = new Date(row.date);
         if (rowDate.getMonth() + 1 === currentMonth && rowDate.getFullYear() === currentYear) {
             totalMonthlyAdvance += parseFloat(row.advance) || 0;
         }
@@ -108,13 +109,12 @@ async function loadDailyHistory() {
     
     if(!selectedRawDate) return;
 
-    // Convert YYYY-MM-DD to MM/DD/YYYY to match Supabase
+    // Convert YYYY-MM-DD to M/D/YYYY to match Screenshot (16).jpg
     const [y, m, d] = selectedRawDate.split('-');
-    const targetDateStr = `${m}/${d}/${y}`;
+    const targetDateStr = `${parseInt(m)}/${parseInt(d)}/${y}`;
 
     container.innerHTML = `<p style="color: gray;">Searching logs for ${targetDateStr}...</p>`;
 
-    // Fetch all records and filter locally to ensure match
     const { data: allRecords, error } = await _supabase
         .from('attendance_history')
         .select('*');
