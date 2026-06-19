@@ -4,10 +4,6 @@
     <title>Sparkx Dashboard</title>
     <link rel="stylesheet" href="style.css">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <style>
-        .dashboard-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; padding: 20px; }
-        .stat-card { padding: 20px; border-radius: 8px; background: white; box-shadow: 0 2px 5px rgba(0,0,0,0.1); border-top: 4px solid #333; }
-    </style>
 </head>
 <body>
 
@@ -20,15 +16,36 @@
         <a href="reports.html">📄 Reports</a>
         <a href="index.html">Logout</a>
     </div>
+      
+    <h1>Sparkx Welding and Fabrications Bengaluru</h1>
+    <h2>Management Dashboard (Cloud Real-Time Metrics)</h2>
 
-    <h1>Sparkx Management Dashboard</h1>
-
-    <div class="dashboard-grid">
-        <!-- New Monthly Payment Stat Card -->
-        <div class="stat-card" style="border-top: 4px solid #2e7d32;">
-            <h3>Month Remaining Payment</h3>
-            <p id="totalNetBalance" style="font-size: 24px; font-weight: bold; color: #2e7d32;">Calculating...</p>
+    <!-- Metrics Grid -->
+    <div style="display: flex; gap: 15px; margin-bottom: 25px; flex-wrap: wrap;">
+        <div style="flex: 1; min-width: 140px; background: #0d47a1; color: white; padding: 15px; border-radius: 8px; text-align: center;">
+            <h3 style="margin: 0; font-size: 14px; text-transform: uppercase; opacity: 0.9;">Total Workers</h3>
+            <p id="metricTotalWorkers" style="margin: 10px 0 0 0; font-size: 28px; font-weight: bold;">0</p>
         </div>
+        <div style="flex: 1; min-width: 140px; background: #28a745; color: white; padding: 15px; border-radius: 8px; text-align: center;">
+            <h3 style="margin: 0; font-size: 14px; text-transform: uppercase; opacity: 0.9;">Present Today</h3>
+            <p id="metricPresentToday" style="margin: 10px 0 0 0; font-size: 28px; font-weight: bold;">0</p>
+        </div>
+        <div style="flex: 1; min-width: 140px; background: #dc3545; color: white; padding: 15px; border-radius: 8px; text-align: center;">
+            <h3 style="margin: 0; font-size: 14px; text-transform: uppercase; opacity: 0.9;">Month Total Advances</h3>
+            <p id="metricMonthAdvance" style="margin: 10px 0 0 0; font-size: 28px; font-weight: bold;">₹0</p>
+        </div>
+        <!-- NEW CARD -->
+        <div style="flex: 1; min-width: 140px; background: #2e7d32; color: white; padding: 15px; border-radius: 8px; text-align: center;">
+            <h3 style="margin: 0; font-size: 14px; text-transform: uppercase; opacity: 0.9;">Month Remaining Payment</h3>
+            <p id="totalNetBalance" style="margin: 10px 0 0 0; font-size: 28px; font-weight: bold;">₹0</p>
+        </div>
+    </div>
+
+    <!-- Targeted Calendar Selection Feature -->
+    <div class="login-box" style="max-width: 100%; box-sizing: border-box;">
+        <h3 style="margin-top:0; color:#0d47a1;">View Daily Work History</h3>
+        <input type="date" id="historyFilterDate" onchange="loadDailyHistory()" style="font-weight: bold; font-size: 15px; border: 2px solid #0d47a1; padding: 6px;">
+        <div id="dailyHistoryContainer"></div>
     </div>
 </div>
 
@@ -36,44 +53,60 @@
 const SUPABASE_URL = "https://fjzqscohyteznkehiqnf.supabase.co"; 
 const SUPABASE_KEY = "sb_publishable_ER-PXAe4A1vsLDYETL4BKw_G7p24kTE"; 
 const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-
-// Ensure this matches your labour list
 let labourList = JSON.parse(localStorage.getItem('labourList')) || [{id: "1", name: "Javed", wage: 1300}, {id: "2", name: "Arbaj", wage: 1000}];
 
-window.onload = async function() {
-    await updateDashboardStats();
+window.onload = function() {
+    let today = new Date();
+    document.getElementById('historyFilterDate').value = today.toISOString().split('T')[0];
+    loadDashboardMetrics();
 };
 
-async function updateDashboardStats() {
-    const { data: att } = await _supabase.from('attendance_history').select('*');
+async function loadDashboardMetrics() {
+    const { data: workers } = await _supabase.from('labour_list').select('id');
+    const { data: history } = await _supabase.from('attendance_history').select('*');
     const { data: pay } = await _supabase.from('workshop_payouts').select('*');
     
-    const now = new Date();
-    const currentMonth = now.getMonth() + 1;
-    const currentYear = now.getFullYear();
+    if(workers) document.getElementById('metricTotalWorkers').textContent = workers.length;
 
-    const monthAtt = att.filter(r => new Date(r.date).getMonth() + 1 === currentMonth && new Date(r.date).getFullYear() === currentYear);
-    const monthPay = pay.filter(p => new Date(p.created_at).getMonth() + 1 === currentMonth && new Date(p.created_at).getFullYear() === currentYear);
+    let todayStr = new Date().toLocaleDateString();
+    let now = new Date();
+    let currentMonth = now.getMonth() + 1;
+    let currentYear = now.getFullYear();
 
+    let presentTodayCount = 0;
+    let totalMonthlyAdvance = 0;
     let grandTotalNet = 0;
-    
-    labourList.forEach(w => {
-        const wAtt = monthAtt.filter(r => r.labourid == w.id && r.status == "Present");
-        const wPay = monthPay.filter(p => p.labourid == w.id);
-        
-        const gross = wAtt.reduce((sum, r) => sum + (parseFloat(r.wageattime)||w.wage) + (parseFloat(r.otamount)||0), 0);
-        
-        // Match the logic used in salary.html: Attendance Advance + Payout Advance
-        const attAdvances = wAtt.reduce((sum, r) => sum + (parseFloat(r.advance)||0), 0);
-        const payoutAdvances = wPay.filter(p => p.type == "Advance").reduce((s, p) => s + parseFloat(p.amount), 0);
-        const totalAdvances = attAdvances + payoutAdvances;
-        
-        const totalSettlements = wPay.filter(p => p.type == "Final Settlement").reduce((s, p) => s + parseFloat(p.amount), 0);
-        
-        grandTotalNet += (gross - totalAdvances - totalSettlements);
+
+    // Calc metrics
+    history.forEach(row => {
+        let rowDate = new Date(row.date);
+        if (row.date === todayStr && row.status === "Present") presentTodayCount++;
+        if (rowDate.getMonth() + 1 === currentMonth && rowDate.getFullYear() === currentYear) {
+            totalMonthlyAdvance += parseFloat(row.advance) || 0;
+        }
     });
 
-    document.getElementById('totalNetBalance').innerText = `₹${grandTotalNet.toLocaleString()}`;
+    // Calc Month Remaining Payment
+    labourList.forEach(w => {
+        const wAtt = history.filter(r => r.labourid == w.id && r.status == "Present" && new Date(r.date).getMonth()+1 == currentMonth);
+        const wPay = pay.filter(p => p.labourid == w.id && new Date(p.created_at).getMonth()+1 == currentMonth);
+        
+        const gross = wAtt.reduce((sum, r) => sum + (parseFloat(r.wageattime)||w.wage) + (parseFloat(r.otamount)||0), 0);
+        const adv = wAtt.reduce((sum, r) => sum + (parseFloat(r.advance)||0), 0) + 
+                    wPay.filter(p => p.type == "Advance").reduce((s, p) => s + parseFloat(p.amount), 0);
+        const set = wPay.filter(p => p.type == "Final Settlement").reduce((s, p) => s + parseFloat(p.amount), 0);
+        grandTotalNet += (gross - adv - set);
+    });
+
+    document.getElementById('metricPresentToday').textContent = presentTodayCount;
+    document.getElementById('metricMonthAdvance').textContent = "₹" + totalMonthlyAdvance;
+    document.getElementById('totalNetBalance').textContent = "₹" + grandTotalNet.toLocaleString();
+
+    loadDailyHistory();
+}
+
+async function loadDailyHistory() {
+    // ... (Your existing loadDailyHistory code)
 }
 </script>
 </body>
