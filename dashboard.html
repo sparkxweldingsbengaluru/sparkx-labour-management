@@ -7,12 +7,16 @@
     <style>
         body { font-family: sans-serif; background-color: #f4f7f6; margin: 0; padding: 20px; }
         .container { max-width: 900px; margin: auto; text-align: center; }
+        
+        /* Navigation */
         .menu { background: #0d47a1; padding: 15px; border-radius: 8px; margin-bottom: 25px; }
         .menu a { color: white; text-decoration: none; font-weight: bold; margin: 0 10px; }
         
+        /* Metrics */
         .stats-row { display: flex; gap: 15px; margin-bottom: 30px; flex-wrap: wrap; }
         .stat-card { flex: 1; min-width: 180px; padding: 15px; border-radius: 8px; color: white; font-weight: bold; }
         
+        /* Work History */
         .work-history { background: white; padding: 20px; border-radius: 8px; border: 1px solid #ddd; max-width: 500px; margin: auto; }
         .worker-card { padding: 10px; border: 1px solid #ddd; margin-top: 10px; border-radius: 5px; text-align: left; position: relative; }
         .badge { background: #2e7d32; color: white; padding: 2px 8px; border-radius: 4px; font-size: 11px; float: right; }
@@ -57,7 +61,7 @@ window.onload = function() {
 };
 
 async function loadDashboardMetrics() {
-    const { data: workers } = await _supabase.from('labour_list').select('id');
+    const { data: workers } = await _supabase.from('labour_list').select('id, name, wage');
     const { data: history } = await _supabase.from('attendance_history').select('*');
     const { data: pay } = await _supabase.from('workshop_payouts').select('*');
     
@@ -66,12 +70,11 @@ async function loadDashboardMetrics() {
     let now = new Date();
     let currentMonth = now.getMonth() + 1;
     let currentYear = now.getFullYear();
-
-    // Today's date in 'M/D/YYYY' format for database comparison
     let todayStr = `${now.getMonth()+1}/${now.getDate()}/${now.getFullYear()}`;
 
     let presentCount = 0;
     let monthAdv = 0;
+    let totalRemainingPayment = 0;
 
     history.forEach(row => {
         if (row.date === todayStr && row.status === "Present") presentCount++;
@@ -81,8 +84,21 @@ async function loadDashboardMetrics() {
         }
     });
 
+    workers.forEach(w => {
+        const wAtt = history.filter(r => r.labourid == w.id && new Date(r.date).getMonth()+1 == currentMonth);
+        const wPay = pay.filter(p => p.labourid == w.id && new Date(p.created_at).getMonth()+1 == currentMonth);
+        
+        const gross = wAtt.reduce((sum, r) => sum + (parseFloat(r.wageattime)||w.wage) + (parseFloat(r.otamount)||0), 0);
+        const adv = wAtt.reduce((sum, r) => sum + (parseFloat(r.advance)||0), 0) + 
+                    wPay.filter(p => p.type.toLowerCase().includes("advance")).reduce((s, p) => s + parseFloat(p.amount), 0);
+        const set = wPay.filter(p => p.type.toLowerCase().includes("settlement")).reduce((s, p) => s + parseFloat(p.amount), 0);
+        
+        totalRemainingPayment += (gross - adv - set);
+    });
+
     document.getElementById('metricPresentToday').textContent = presentCount;
     document.getElementById('metricMonthAdvance').textContent = "₹" + monthAdv;
+    document.getElementById('totalNetBalance').textContent = "₹" + totalRemainingPayment.toLocaleString();
 }
 
 async function loadDailyHistory() {
