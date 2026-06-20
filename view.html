@@ -1,22 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Sparkx | Worker Portal</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; background: #f4f7f6; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
+        .login-box { background: white; padding: 40px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); width: 300px; text-align: center; }
+        input { width: 100%; padding: 12px; margin: 10px 0; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box; }
+        button { width: 100%; padding: 12px; background: #1a237e; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; }
+        #data-section { display: none; padding: 20px; width: 90%; max-width: 1000px; }
+        table { width: 100%; border-collapse: collapse; background: white; }
+        th { background: #1a237e; color: white; padding: 12px; }
+        td { padding: 12px; border-bottom: 1px solid #ddd; }
+    </style>
+</head>
+<body>
+
+<div class="login-box" id="loginForm">
+    <h2>Worker Login</h2>
+    <input type="text" id="user" placeholder="Username">
+    <input type="password" id="pass" placeholder="Password">
+    <button onclick="checkLogin()">Sign In</button>
+</div>
+
+<div id="data-section">
+    <h2>Attendance History</h2>
+    <table>
+        <thead><tr><th>Date</th><th>Worker ID</th><th>Status</th><th>Wage/OT</th></tr></thead>
+        <tbody id="attendanceBody"></tbody>
+    </table>
+</div>
+
 <script>
-    // Simple authentication
-    const username = prompt("Enter Username:");
-    const password = prompt("Enter Password:");
-
-    // Credentials set to 'Worker' and 'Sparkx123'
-    if (username !== "Worker" || password !== "Sparkx123") { 
-        alert("Access Denied");
-        window.location.href = "index.html"; 
-    }
-
     const _supabase = supabase.createClient("https://fjzqscohyteznkehiqnf.supabase.co", "sb_publishable_ER-PXAe4A1vsLDYETL4BKw_G7p24kTE");
 
+    async function checkLogin() {
+        const u = document.getElementById('user').value;
+        const p = document.getElementById('pass').value;
+
+        if (u === "Worker" && p === "Sparkx123") {
+            document.getElementById('loginForm').style.display = 'none';
+            document.getElementById('data-section').style.display = 'block';
+            fetchData();
+        } else {
+            alert("Invalid Credentials");
+        }
+    }
+
     async function fetchData() {
-        const { data: att } = await _supabase.from('attendance_history').select('*');
+        const { data } = await _supabase.from('attendance_history').select('*');
         const attBody = document.getElementById('attendanceBody');
-        att.forEach(r => {
+        data.forEach(r => {
             attBody.innerHTML += `<tr><td>${r.date}</td><td>${r.labourid}</td><td>${r.status}</td><td>${r.wageattime || ''} / ${r.otamount || 0}</td></tr>`;
         });
     }
-    fetchData();
 </script>
+</body>
+</html>
