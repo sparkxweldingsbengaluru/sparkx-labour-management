@@ -5,19 +5,24 @@
     <title>Sparkx | Worker Portal</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
-        body { font-family: 'Segoe UI', sans-serif; background: #f4f7f6; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
-        .login-box { background: white; padding: 40px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); width: 300px; text-align: center; }
+        body { font-family: 'Segoe UI', sans-serif; background: #f4f7f6; margin: 0; padding: 20px; }
+        /* Login Styles */
+        .login-box { background: white; padding: 40px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); width: 300px; text-align: center; margin: 100px auto; }
         input { width: 100%; padding: 12px; margin: 10px 0; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box; }
         button { width: 100%; padding: 12px; background: #1a237e; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; }
-        #data-section { display: none; padding: 20px; width: 90%; max-width: 1000px; }
-        table { width: 100%; border-collapse: collapse; background: white; }
-        th { background: #1a237e; color: white; padding: 12px; }
+        
+        /* Dashboard Styles */
+        #data-section { display: none; max-width: 1000px; margin: auto; }
+        .company-header { text-align: center; color: #1a237e; margin-bottom: 20px; }
+        table { width: 100%; border-collapse: collapse; background: white; margin-bottom: 30px; }
+        th { background: #1a237e; color: white; padding: 12px; text-align: left; }
         td { padding: 12px; border-bottom: 1px solid #ddd; }
     </style>
 </head>
 <body>
 
 <div class="login-box" id="loginForm">
+    <h1 style="color:#1a237e;">Sparkx</h1>
     <h2>Worker Login</h2>
     <input type="text" id="user" placeholder="Username">
     <input type="password" id="pass" placeholder="Password">
@@ -25,6 +30,8 @@
 </div>
 
 <div id="data-section">
+    <h1 class="company-header">Sparkx Welding & Fabrications</h1>
+    
     <h2>Attendance History</h2>
     <table>
         <thead><tr><th>Date</th><th>Worker ID</th><th>Status</th><th>Wage/OT</th></tr></thead>
@@ -51,7 +58,8 @@
     async function fetchData() {
         const { data } = await _supabase.from('attendance_history').select('*');
         const attBody = document.getElementById('attendanceBody');
-        data.forEach(r => {
+        attBody.innerHTML = ""; // Clear
+        data.sort((a,b) => new Date(b.date) - new Date(a.date)).forEach(r => {
             attBody.innerHTML += `<tr><td>${r.date}</td><td>${r.labourid}</td><td>${r.status}</td><td>${r.wageattime || ''} / ${r.otamount || 0}</td></tr>`;
         });
     }
