@@ -95,6 +95,8 @@ function renderMonthly(att, pay) {
 function renderRangeEarnings(att, pay) {
     const start = new Date(document.getElementById('rangeStart').value);
     const end = new Date(document.getElementById('rangeEnd').value);
+    end.setHours(23, 59, 59, 999);
+    
     const filteredAtt = att.filter(r => new Date(r.date) >= start && new Date(r.date) <= end);
     const filteredPay = pay.filter(p => new Date(p.created_at) >= start && new Date(p.created_at) <= end);
     document.getElementById('rangeSalaryTableContainer').innerHTML = generateTable(filteredAtt, filteredPay);
@@ -107,7 +109,7 @@ function generateTable(attRows, payRows) {
         const wPay = payRows.filter(p => p.labourid == w.id);
         const gross = wAtt.reduce((sum, r) => sum + (parseFloat(r.wageattime)||w.wage) + (parseFloat(r.otamount)||0), 0);
         const totalAdvances = wAtt.reduce((sum, r) => sum + (parseFloat(r.advance)||0), 0) + wPay.filter(p => p.type && p.type.toLowerCase().includes("advance")).reduce((s, p) => s + parseFloat(p.amount), 0);
-        const totalSettlements = wPay.filter(p => p.type == "Final Settlement").reduce((s, p) => s + parseFloat(p.amount), 0);
+        const totalSettlements = wPay.filter(p => p.type && p.type.toLowerCase().includes("settlement")).reduce((s, p) => s + parseFloat(p.amount), 0);
         const net = gross - totalAdvances - totalSettlements;
         html += `<tr><td>${w.name}</td><td>₹${gross}</td><td>₹${totalAdvances}</td><td>₹${totalSettlements}</td><td style="font-weight:bold; color:${net<0?'red':'green'}">₹${net}</td></tr>`;
     });
@@ -128,7 +130,23 @@ function renderMasterLedger(pay) {
 async function deletePayout(id) { if (confirm("Delete this record?")) { await _supabase.from('workshop_payouts').delete().eq('id', id); refreshAllSalaryData(); } }
 function editPayout(p) { document.getElementById('editingPayoutId').value = p.id; document.getElementById('payoutWorker').value = p.labourid; document.getElementById('payoutAmount').value = p.amount; document.getElementById('payoutType').value = p.type; document.getElementById('payoutNotes').value = p.notes || ""; document.getElementById('submitPayoutBtn').innerHTML = "UPDATE"; document.getElementById('cancelEditBtn').style.display = "inline"; }
 function clearPayoutForm() { document.getElementById('editingPayoutId').value = ""; document.getElementById('submitPayoutBtn').innerHTML = "SAVE PAYOUT"; document.getElementById('cancelEditBtn').style.display = "none"; }
-async function handleFormSubmission(e) { e.preventDefault(); const id = document.getElementById('editingPayoutId').value; const data = { labourid: document.getElementById('payoutWorker').value, name: document.getElementById('payoutWorker').options[document.getElementById('payoutWorker').selectedIndex].text, amount: parseFloat(document.getElementById('payoutAmount').value), type: document.getElementById('payoutType').value, notes: document.getElementById('payoutNotes').value }; if(id) await _supabase.from('workshop_payouts').update(data).eq('id', id); else await _supabase.from('workshop_payouts').insert([data]); refreshAllSalaryData(); clearPayoutForm(); document.getElementById('payoutAmount').value = ""; }
+
+async function handleFormSubmission(e) { 
+    e.preventDefault(); 
+    const id = document.getElementById('editingPayoutId').value; 
+    const data = { 
+        labourid: document.getElementById('payoutWorker').value, 
+        name: document.getElementById('payoutWorker').options[document.getElementById('payoutWorker').selectedIndex].text, 
+        amount: parseFloat(document.getElementById('payoutAmount').value), 
+        type: document.getElementById('payoutType').value, 
+        notes: document.getElementById('payoutNotes').value 
+    }; 
+    if(id) await _supabase.from('workshop_payouts').update(data).eq('id', id); 
+    else await _supabase.from('workshop_payouts').insert([data]); 
+    await refreshAllSalaryData(); 
+    clearPayoutForm(); 
+    document.getElementById('payoutAmount').value = ""; 
+}
 </script>
 </body>
 </html>
