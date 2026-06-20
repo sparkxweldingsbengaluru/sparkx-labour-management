@@ -7,16 +7,20 @@
     <style>
         :root { --primary: #1a237e; --secondary: #f5f5f5; --accent: #ff9800; --text: #333; }
         body { font-family: 'Segoe UI', Tahoma, sans-serif; background: var(--secondary); color: var(--text); margin: 0; padding: 20px; }
+        
         .menu { background: #333; padding: 15px; border-radius: 8px; margin-bottom: 20px; display: flex; gap: 15px; }
         .menu a { color: white; text-decoration: none; font-weight: bold; }
+        
         .dashboard-header { background: var(--primary); color: white; padding: 2rem; border-radius: 12px; margin-bottom: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
         .filter-panel { background: white; padding: 20px; border-radius: 12px; display: flex; gap: 20px; align-items: center; box-shadow: 0 2px 4px rgba(0,0,0,0.05); margin-bottom: 20px; flex-wrap: wrap; }
         .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; margin-bottom: 20px; }
         .stat-card { background: white; padding: 25px; border-radius: 12px; border-left: 5px solid var(--accent); box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+        
         .full-width-container { background: white; padding: 20px; border-radius: 12px; margin-bottom: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
         table { width: 100%; border-collapse: separate; border-spacing: 0; }
         th { background: var(--primary); color: white; padding: 16px; text-align: left; }
         td { padding: 16px; border-bottom: 1px solid #eee; }
+        
         .btn-print { background: var(--accent); color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer; font-weight: bold; }
     </style>
 </head>
@@ -61,6 +65,7 @@
         <label>Select Worker: <select id="cycleWorker" onchange="renderSettlementCycles()"><option value="">--Select--</option></select></label>
         <div id="cycleContainer" style="margin-top:20px;"></div>
     </div>
+
     <div class="full-width-container">
         <h2>Daily Attendance Breakdown</h2>
         <table id="attendanceTable">
@@ -137,12 +142,13 @@ function renderSettlementCycles() {
 
     const w = labourList.find(x => x.id == workerId);
     const settlements = appData.pay.filter(p => p.labourid == workerId && p.type.toLowerCase().includes("settlement")).sort((a,b) => new Date(a.created_at) - new Date(b.created_at));
+    const figStyle = `style="font-size: 1.2rem; font-weight: bold; color: #1a237e;"`;
     
     let html = `<table><tr><th>Cycle Period</th><th>Days</th><th>Gross</th><th>OT</th><th>Advances</th><th>Settlement</th></tr>`;
     let prevDate = null;
 
     settlements.forEach(s => {
-        const startDate = prevDate ? new Date(prevDate.getTime() + 86400000) : new Date(0);
+        const startDate = prevDate ? new Date(prevDate.getTime() + 86400000) : new Date("2026-06-01");
         const endDate = new Date(s.created_at);
         const wAtt = appData.att.filter(r => r.labourid == workerId && r.status == "Present" && new Date(r.date) >= startDate && new Date(r.date) <= endDate);
         const wPay = appData.pay.filter(p => p.labourid == workerId && new Date(p.created_at) > startDate && new Date(p.created_at) <= endDate);
@@ -152,7 +158,14 @@ function renderSettlementCycles() {
         const ot = wAtt.reduce((sum, r) => sum + (parseFloat(r.otamount)||0), 0);
         const adv = wAtt.reduce((sum, r) => sum + (parseFloat(r.advance)||0), 0) + wPay.filter(p => p.type.toLowerCase().includes("advance")).reduce((s, p) => s + parseFloat(p.amount), 0);
 
-        html += `<tr><td>${startDate.toLocaleDateString()} to ${endDate.toLocaleDateString()}</td><td>${days}</td><td>₹${gross}</td><td>₹${ot}</td><td>₹${adv}</td><td>₹${s.amount}</td></tr>`;
+        html += `<tr>
+            <td>${startDate.toLocaleDateString()} to ${endDate.toLocaleDateString()}</td>
+            <td>${days}</td>
+            <td ${figStyle}>₹${gross}</td>
+            <td ${figStyle}>₹${ot}</td>
+            <td ${figStyle}>₹${adv}</td>
+            <td ${figStyle}>₹${s.amount}</td>
+        </tr>`;
         prevDate = endDate;
     });
     document.getElementById('cycleContainer').innerHTML = html + `</table>`;
