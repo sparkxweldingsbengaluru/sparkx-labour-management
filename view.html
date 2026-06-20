@@ -6,16 +6,14 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         body { font-family: 'Segoe UI', sans-serif; background: #f4f7f6; margin: 0; padding: 20px; }
-        /* Login Styles */
         .login-box { background: white; padding: 40px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); width: 300px; text-align: center; margin: 100px auto; }
         input { width: 100%; padding: 12px; margin: 10px 0; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box; }
         button { width: 100%; padding: 12px; background: #1a237e; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; }
         
-        /* Dashboard Styles */
         #data-section { display: none; max-width: 1000px; margin: auto; background: white; padding: 20px; border-radius: 12px; }
         .company-header { text-align: center; color: #1a237e; margin-bottom: 20px; }
         .filter-panel { background: #eee; padding: 15px; border-radius: 8px; margin-bottom: 20px; display: flex; gap: 15px; flex-wrap: wrap; }
-        table { width: 100%; border-collapse: collapse; }
+        table { width: 100%; border-collapse: collapse; margin-bottom: 30px; }
         th { background: #1a237e; color: white; padding: 12px; text-align: left; }
         td { padding: 12px; border-bottom: 1px solid #ddd; }
     </style>
@@ -48,14 +46,20 @@
         <thead><tr><th>Date</th><th>Worker Name</th><th>Status</th><th>Wage/OT</th></tr></thead>
         <tbody id="attendanceBody"></tbody>
     </table>
+
+    <h2>Advances & Settlements</h2>
+    <table>
+        <thead><tr><th>Date</th><th>Worker Name</th><th>Type</th><th>Amount</th></tr></thead>
+        <tbody id="payoutBody"></tbody>
+    </table>
 </div>
 
 <script>
     const _supabase = supabase.createClient("https://fjzqscohyteznkehiqnf.supabase.co", "sb_publishable_ER-PXAe4A1vsLDYETL4BKw_G7p24kTE");
     const labourList = JSON.parse(localStorage.getItem('labourList')) || [];
     let fullAttendanceData = [];
+    let fullPayoutData = [];
 
-    // Populate Worker Filter on load
     const workerFilter = document.getElementById('viewWorker');
     labourList.forEach(w => workerFilter.innerHTML += `<option value="${w.id}">${w.name}</option>`);
 
@@ -67,8 +71,10 @@
             document.getElementById('loginForm').style.display = 'none';
             document.getElementById('data-section').style.display = 'block';
             
-            const { data } = await _supabase.from('attendance_history').select('*');
-            fullAttendanceData = data || [];
+            const { data: att } = await _supabase.from('attendance_history').select('*');
+            const { data: pay } = await _supabase.from('workshop_payouts').select('*');
+            fullAttendanceData = att || [];
+            fullPayoutData = pay || [];
             applyFilters();
         } else {
             alert("Invalid Credentials");
@@ -78,26 +84,33 @@
     function applyFilters() {
         const start = new Date(document.getElementById('viewStart').value || "2000-01-01");
         const end = new Date(document.getElementById('viewEnd').value || "2100-01-01");
-        end.setHours(23, 59, 59); // Include full end day
+        end.setHours(23, 59, 59);
         const workerId = document.getElementById('viewWorker').value;
 
-        const filtered = fullAttendanceData.filter(r => {
+        // Filter Attendance
+        const filteredAtt = fullAttendanceData.filter(r => {
             const d = new Date(r.date);
-            const matchesDate = d >= start && d <= end;
-            const matchesWorker = (workerId === "All" || r.labourid == workerId);
-            return matchesDate && matchesWorker;
+            return d >= start && d <= end && (workerId === "All" || r.labourid == workerId);
         });
 
         const attBody = document.getElementById('attendanceBody');
         attBody.innerHTML = "";
-        filtered.sort((a,b) => new Date(b.date) - new Date(a.date)).forEach(r => {
+        filteredAtt.sort((a,b) => new Date(b.date) - new Date(a.date)).forEach(r => {
             const worker = labourList.find(w => w.id == r.labourid);
-            attBody.innerHTML += `<tr>
-                <td>${r.date}</td>
-                <td>${worker ? worker.name : "Unknown"}</td>
-                <td>${r.status}</td>
-                <td>${r.wageattime || ''} / ${r.otamount || 0}</td>
-            </tr>`;
+            attBody.innerHTML += `<tr><td>${r.date}</td><td>${worker ? worker.name : "Unknown"}</td><td>${r.status}</td><td>${r.wageattime || ''} / ${r.otamount || 0}</td></tr>`;
+        });
+
+        // Filter Payouts
+        const filteredPay = fullPayoutData.filter(p => {
+            const d = new Date(p.created_at);
+            return d >= start && d <= end && (workerId === "All" || p.labourid == workerId);
+        });
+
+        const payBody = document.getElementById('payoutBody');
+        payBody.innerHTML = "";
+        filteredPay.sort((a,b) => new Date(b.created_at) - new Date(a.created_at)).forEach(p => {
+            const worker = labourList.find(w => w.id == p.labourid);
+            payBody.innerHTML += `<tr><td>${p.created_at.split('T')[0]}</td><td>${worker ? worker.name : "Unknown"}</td><td>${p.type || 'N/A'}</td><td>₹${p.amount}</td></tr>`;
         });
     }
 </script>
