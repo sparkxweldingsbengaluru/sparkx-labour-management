@@ -12,9 +12,10 @@
         button { width: 100%; padding: 12px; background: #1a237e; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; }
         
         /* Dashboard Styles */
-        #data-section { display: none; max-width: 1000px; margin: auto; }
+        #data-section { display: none; max-width: 1000px; margin: auto; background: white; padding: 20px; border-radius: 12px; }
         .company-header { text-align: center; color: #1a237e; margin-bottom: 20px; }
-        table { width: 100%; border-collapse: collapse; background: white; margin-bottom: 30px; }
+        .filter-panel { background: #eee; padding: 15px; border-radius: 8px; margin-bottom: 20px; display: flex; gap: 15px; flex-wrap: wrap; }
+        table { width: 100%; border-collapse: collapse; }
         th { background: #1a237e; color: white; padding: 12px; text-align: left; }
         td { padding: 12px; border-bottom: 1px solid #ddd; }
     </style>
@@ -32,15 +33,31 @@
 <div id="data-section">
     <h1 class="company-header">Sparkx Welding & Fabrications</h1>
     
+    <div class="filter-panel">
+        <label>Start: <input type="date" id="viewStart" onchange="applyFilters()"></label>
+        <label>End: <input type="date" id="viewEnd" onchange="applyFilters()"></label>
+        <label>Worker: 
+            <select id="viewWorker" onchange="applyFilters()">
+                <option value="All">All Workers</option>
+            </select>
+        </label>
+    </div>
+
     <h2>Attendance History</h2>
     <table>
-        <thead><tr><th>Date</th><th>Worker ID</th><th>Status</th><th>Wage/OT</th></tr></thead>
+        <thead><tr><th>Date</th><th>Worker Name</th><th>Status</th><th>Wage/OT</th></tr></thead>
         <tbody id="attendanceBody"></tbody>
     </table>
 </div>
 
 <script>
     const _supabase = supabase.createClient("https://fjzqscohyteznkehiqnf.supabase.co", "sb_publishable_ER-PXAe4A1vsLDYETL4BKw_G7p24kTE");
+    const labourList = JSON.parse(localStorage.getItem('labourList')) || [];
+    let fullAttendanceData = [];
+
+    // Populate Worker Filter on load
+    const workerFilter = document.getElementById('viewWorker');
+    labourList.forEach(w => workerFilter.innerHTML += `<option value="${w.id}">${w.name}</option>`);
 
     async function checkLogin() {
         const u = document.getElementById('user').value;
@@ -49,18 +66,38 @@
         if (u === "Worker" && p === "Sparkx123") {
             document.getElementById('loginForm').style.display = 'none';
             document.getElementById('data-section').style.display = 'block';
-            fetchData();
+            
+            const { data } = await _supabase.from('attendance_history').select('*');
+            fullAttendanceData = data || [];
+            applyFilters();
         } else {
             alert("Invalid Credentials");
         }
     }
 
-    async function fetchData() {
-        const { data } = await _supabase.from('attendance_history').select('*');
+    function applyFilters() {
+        const start = new Date(document.getElementById('viewStart').value || "2000-01-01");
+        const end = new Date(document.getElementById('viewEnd').value || "2100-01-01");
+        end.setHours(23, 59, 59); // Include full end day
+        const workerId = document.getElementById('viewWorker').value;
+
+        const filtered = fullAttendanceData.filter(r => {
+            const d = new Date(r.date);
+            const matchesDate = d >= start && d <= end;
+            const matchesWorker = (workerId === "All" || r.labourid == workerId);
+            return matchesDate && matchesWorker;
+        });
+
         const attBody = document.getElementById('attendanceBody');
-        attBody.innerHTML = ""; // Clear
-        data.sort((a,b) => new Date(b.date) - new Date(a.date)).forEach(r => {
-            attBody.innerHTML += `<tr><td>${r.date}</td><td>${r.labourid}</td><td>${r.status}</td><td>${r.wageattime || ''} / ${r.otamount || 0}</td></tr>`;
+        attBody.innerHTML = "";
+        filtered.sort((a,b) => new Date(b.date) - new Date(a.date)).forEach(r => {
+            const worker = labourList.find(w => w.id == r.labourid);
+            attBody.innerHTML += `<tr>
+                <td>${r.date}</td>
+                <td>${worker ? worker.name : "Unknown"}</td>
+                <td>${r.status}</td>
+                <td>${r.wageattime || ''} / ${r.otamount || 0}</td>
+            </tr>`;
         });
     }
 </script>
