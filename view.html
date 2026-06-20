@@ -1,0 +1,22 @@
+<script>
+    // Simple authentication
+    const username = prompt("Enter Username:");
+    const password = prompt("Enter Password:");
+
+    // Credentials set to 'Worker' and 'Sparkx123'
+    if (username !== "Worker" || password !== "Sparkx123") { 
+        alert("Access Denied");
+        window.location.href = "index.html"; 
+    }
+
+    const _supabase = supabase.createClient("https://fjzqscohyteznkehiqnf.supabase.co", "sb_publishable_ER-PXAe4A1vsLDYETL4BKw_G7p24kTE");
+
+    async function fetchData() {
+        const { data: att } = await _supabase.from('attendance_history').select('*');
+        const attBody = document.getElementById('attendanceBody');
+        att.forEach(r => {
+            attBody.innerHTML += `<tr><td>${r.date}</td><td>${r.labourid}</td><td>${r.status}</td><td>${r.wageattime || ''} / ${r.otamount || 0}</td></tr>`;
+        });
+    }
+    fetchData();
+</script>
