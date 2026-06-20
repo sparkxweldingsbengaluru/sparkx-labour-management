@@ -43,7 +43,7 @@
 
     <h2>Attendance History</h2>
     <table>
-        <thead><tr><th>Date</th><th>Worker Name</th><th>Status</th><th>Wage/OT</th></tr></thead>
+        <thead><tr><th>Date</th><th>Worker Name</th><th>Status</th><th>Wage/OT</th><th>Advance</th></tr></thead>
         <tbody id="attendanceBody"></tbody>
     </table>
 
@@ -87,7 +87,6 @@
         end.setHours(23, 59, 59);
         const workerId = document.getElementById('viewWorker').value;
 
-        // Filter Attendance
         const filteredAtt = fullAttendanceData.filter(r => {
             const d = new Date(r.date);
             return d >= start && d <= end && (workerId === "All" || r.labourid == workerId);
@@ -97,10 +96,9 @@
         attBody.innerHTML = "";
         filteredAtt.sort((a,b) => new Date(b.date) - new Date(a.date)).forEach(r => {
             const worker = labourList.find(w => w.id == r.labourid);
-            attBody.innerHTML += `<tr><td>${r.date}</td><td>${worker ? worker.name : "Unknown"}</td><td>${r.status}</td><td>${r.wageattime || ''} / ${r.otamount || 0}</td></tr>`;
+            attBody.innerHTML += `<tr><td>${r.date}</td><td>${worker ? worker.name : "Unknown"}</td><td>${r.status}</td><td>${r.wageattime || '0'} / ${r.otamount || '0'}</td><td>₹${r.advance || '0'}</td></tr>`;
         });
 
-        // Filter Payouts
         const filteredPay = fullPayoutData.filter(p => {
             const d = new Date(p.created_at);
             return d >= start && d <= end && (workerId === "All" || p.labourid == workerId);
