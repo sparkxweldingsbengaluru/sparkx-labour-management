@@ -56,12 +56,10 @@
 
 <script>
     const _supabase = supabase.createClient("https://fjzqscohyteznkehiqnf.supabase.co", "sb_publishable_ER-PXAe4A1vsLDYETL4BKw_G7p24kTE");
-    const labourList = JSON.parse(localStorage.getItem('labourList')) || [];
+    
+    let labourList = [];
     let fullAttendanceData = [];
     let fullPayoutData = [];
-
-    const workerFilter = document.getElementById('viewWorker');
-    labourList.forEach(w => workerFilter.innerHTML += `<option value="${w.id}">${w.name}</option>`);
 
     async function checkLogin() {
         const u = document.getElementById('user').value;
@@ -71,6 +69,15 @@
             document.getElementById('loginForm').style.display = 'none';
             document.getElementById('data-section').style.display = 'block';
             
+            // 1. Fetch names from DB
+            const { data: names } = await _supabase.from('labour_list').select('id, name');
+            labourList = names || [];
+
+            // 2. Populate filter
+            const workerFilter = document.getElementById('viewWorker');
+            labourList.forEach(w => workerFilter.innerHTML += `<option value="${w.id}">${w.name}</option>`);
+
+            // 3. Fetch logs
             const { data: att } = await _supabase.from('attendance_history').select('*');
             const { data: pay } = await _supabase.from('workshop_payouts').select('*');
             fullAttendanceData = att || [];
@@ -87,26 +94,24 @@
         end.setHours(23, 59, 59);
         const workerId = document.getElementById('viewWorker').value;
 
-        const filteredAtt = fullAttendanceData.filter(r => {
-            const d = new Date(r.date);
-            return d >= start && d <= end && (workerId === "All" || r.labourid == workerId);
-        });
-
+        // Attendance
         const attBody = document.getElementById('attendanceBody');
         attBody.innerHTML = "";
-        filteredAtt.sort((a,b) => new Date(b.date) - new Date(a.date)).forEach(r => {
+        fullAttendanceData.filter(r => {
+            const d = new Date(r.date);
+            return d >= start && d <= end && (workerId === "All" || r.labourid == workerId);
+        }).sort((a,b) => new Date(b.date) - new Date(a.date)).forEach(r => {
             const worker = labourList.find(w => w.id == r.labourid);
             attBody.innerHTML += `<tr><td>${r.date}</td><td>${worker ? worker.name : "Unknown"}</td><td>${r.status}</td><td>${r.wageattime || '0'} / ${r.otamount || '0'}</td><td>₹${r.advance || '0'}</td></tr>`;
         });
 
-        const filteredPay = fullPayoutData.filter(p => {
-            const d = new Date(p.created_at);
-            return d >= start && d <= end && (workerId === "All" || p.labourid == workerId);
-        });
-
+        // Payouts
         const payBody = document.getElementById('payoutBody');
         payBody.innerHTML = "";
-        filteredPay.sort((a,b) => new Date(b.created_at) - new Date(a.created_at)).forEach(p => {
+        fullPayoutData.filter(p => {
+            const d = new Date(p.created_at);
+            return d >= start && d <= end && (workerId === "All" || p.labourid == workerId);
+        }).sort((a,b) => new Date(b.created_at) - new Date(a.created_at)).forEach(p => {
             const worker = labourList.find(w => w.id == p.labourid);
             payBody.innerHTML += `<tr><td>${p.created_at.split('T')[0]}</td><td>${worker ? worker.name : "Unknown"}</td><td>${p.type || 'N/A'}</td><td>₹${p.amount}</td></tr>`;
         });
