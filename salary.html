@@ -117,7 +117,10 @@ function generateTable(attRows, payRows) {
 function renderMasterLedger(pay) {
     document.getElementById('payoutHistoryLog').innerHTML = pay.map(p => `
         <div style="border-bottom:1px solid #eee; padding:8px; display:flex; justify-content:space-between; align-items:center;">
-            <div><strong>${p.created_at}</strong> - ${p.name}: ₹${p.amount} (${p.type})</div>
+            <div>
+                <strong>${p.created_at}</strong> - ${p.name}: ₹${p.amount} (${p.type})
+                ${p.notes ? `<br><small style="color:gray;">Remarks: ${p.notes}</small>` : ''}
+            </div>
             <div>
                 <button onclick='editPayout(${JSON.stringify(p).replace(/'/g, "&apos;")})' style="background:#0288d1; color:white; border:none; padding:3px 8px; cursor:pointer;">EDIT</button>
                 <button onclick='deletePayout("${p.id}")' style="background:#d32f2f; color:white; border:none; padding:3px 8px; cursor:pointer; margin-left:5px;">DELETE</button>
