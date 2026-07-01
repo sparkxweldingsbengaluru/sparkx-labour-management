@@ -44,6 +44,8 @@
             <input type="hidden" id="editingPayoutId">
             <select id="payoutWorker" required></select>
             <input type="number" id="payoutAmount" placeholder="Amount (₹)" required step="any">
+            <!-- NEW: Date Picker -->
+            <input type="date" id="payoutDate" required>
             <select id="payoutType">
                 <option value="Final Settlement">Final Settlement</option>
                 <option value="Advances">Advances</option>
@@ -57,17 +59,15 @@
 </div>
 
 <script>
-const SUPABASE_URL = "https://fjzqscohyteznkehiqnf.supabase.co"; 
-const SUPABASE_KEY = "sb_publishable_ER-PXAe4A1vsLDYETL4BKw_G7p24kTE"; 
-const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+const _supabase = supabase.createClient("https://fjzqscohyteznkehiqnf.supabase.co", "sb_publishable_ER-PXAe4A1vsLDYETL4BKw_G7p24kTE");
 let labourList = JSON.parse(localStorage.getItem('labourList')) || [{id: "1", name: "Javed", wage: 1300}, {id: "2", name: "Arbaj", wage: 1000}];
 
 window.onload = function() {
     let today = new Date().toISOString().split('T')[0];
-    let month = today.substring(0, 7);
-    document.getElementById('salaryMonth').value = month;
-    document.getElementById('rangeStart').value = month + "-01";
+    document.getElementById('salaryMonth').value = today.substring(0, 7);
+    document.getElementById('rangeStart').value = today.substring(0, 7) + "-01";
     document.getElementById('rangeEnd').value = today;
+    document.getElementById('payoutDate').value = today; // Set default to today
     
     const dropdown = document.getElementById('payoutWorker');
     labourList.forEach(w => {
@@ -79,7 +79,6 @@ window.onload = function() {
 async function refreshAllSalaryData() {
     const { data: att } = await _supabase.from('attendance_history').select('*');
     const { data: pay } = await _supabase.from('workshop_payouts').select('*').order('created_at', { ascending: false });
-    
     renderMonthly(att || [], pay || []);
     renderRangeEarnings(att || [], pay || []);
     renderMasterLedger(pay || []);
@@ -96,7 +95,6 @@ function renderRangeEarnings(att, pay) {
     const start = new Date(document.getElementById('rangeStart').value);
     const end = new Date(document.getElementById('rangeEnd').value);
     end.setHours(23, 59, 59, 999);
-    
     const filteredAtt = att.filter(r => new Date(r.date) >= start && new Date(r.date) <= end);
     const filteredPay = pay.filter(p => new Date(p.created_at) >= start && new Date(p.created_at) <= end);
     document.getElementById('rangeSalaryTableContainer').innerHTML = generateTable(filteredAtt, filteredPay);
@@ -119,7 +117,7 @@ function generateTable(attRows, payRows) {
 function renderMasterLedger(pay) {
     document.getElementById('payoutHistoryLog').innerHTML = pay.map(p => `
         <div style="border-bottom:1px solid #eee; padding:8px; display:flex; justify-content:space-between; align-items:center;">
-            <div><strong>${new Date(p.created_at).toLocaleDateString()}</strong> - ${p.name}: ₹${p.amount} (${p.type})</div>
+            <div><strong>${p.created_at}</strong> - ${p.name}: ₹${p.amount} (${p.type})</div>
             <div>
                 <button onclick='editPayout(${JSON.stringify(p).replace(/'/g, "&apos;")})' style="background:#0288d1; color:white; border:none; padding:3px 8px; cursor:pointer;">EDIT</button>
                 <button onclick='deletePayout("${p.id}")' style="background:#d32f2f; color:white; border:none; padding:3px 8px; cursor:pointer; margin-left:5px;">DELETE</button>
@@ -128,8 +126,8 @@ function renderMasterLedger(pay) {
 }
 
 async function deletePayout(id) { if (confirm("Delete this record?")) { await _supabase.from('workshop_payouts').delete().eq('id', id); refreshAllSalaryData(); } }
-function editPayout(p) { document.getElementById('editingPayoutId').value = p.id; document.getElementById('payoutWorker').value = p.labourid; document.getElementById('payoutAmount').value = p.amount; document.getElementById('payoutType').value = p.type; document.getElementById('payoutNotes').value = p.notes || ""; document.getElementById('submitPayoutBtn').innerHTML = "UPDATE"; document.getElementById('cancelEditBtn').style.display = "inline"; }
-function clearPayoutForm() { document.getElementById('editingPayoutId').value = ""; document.getElementById('submitPayoutBtn').innerHTML = "SAVE PAYOUT"; document.getElementById('cancelEditBtn').style.display = "none"; }
+function editPayout(p) { document.getElementById('editingPayoutId').value = p.id; document.getElementById('payoutWorker').value = p.labourid; document.getElementById('payoutAmount').value = p.amount; document.getElementById('payoutType').value = p.type; document.getElementById('payoutNotes').value = p.notes || ""; document.getElementById('payoutDate').value = p.created_at; document.getElementById('submitPayoutBtn').innerHTML = "UPDATE"; document.getElementById('cancelEditBtn').style.display = "inline"; }
+function clearPayoutForm() { document.getElementById('editingPayoutId').value = ""; document.getElementById('submitPayoutBtn').innerHTML = "SAVE PAYOUT"; document.getElementById('cancelEditBtn').style.display = "none"; document.getElementById('payoutDate').value = new Date().toISOString().split('T')[0]; }
 
 async function handleFormSubmission(e) { 
     e.preventDefault(); 
@@ -139,7 +137,8 @@ async function handleFormSubmission(e) {
         name: document.getElementById('payoutWorker').options[document.getElementById('payoutWorker').selectedIndex].text, 
         amount: parseFloat(document.getElementById('payoutAmount').value), 
         type: document.getElementById('payoutType').value, 
-        notes: document.getElementById('payoutNotes').value 
+        notes: document.getElementById('payoutNotes').value,
+        created_at: document.getElementById('payoutDate').value
     }; 
     if(id) await _supabase.from('workshop_payouts').update(data).eq('id', id); 
     else await _supabase.from('workshop_payouts').insert([data]); 
