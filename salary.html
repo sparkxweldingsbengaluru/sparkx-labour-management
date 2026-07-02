@@ -78,33 +78,28 @@ window.onload = function() {
 async function refreshAllSalaryData() {
     const { data: att } = await _supabase.from('attendance_history').select('*');
     const { data: pay } = await _supabase.from('workshop_payouts').select('*').order('created_at', { ascending: false });
-    renderMonthly(att || [], pay || []);
-    renderRangeEarnings(att || [], pay || []);
+    
+    // Normalize dates to YYYY-MM-DD strings for safe comparison
+    const normAtt = (att || []).map(r => ({...r, normDate: r.date.split('T')[0]}));
+    const normPay = (pay || []).map(p => ({...p, normDate: p.created_at.split('T')[0]}));
+    
+    renderMonthly(normAtt, normPay);
+    renderRangeEarnings(normAtt, normPay);
     renderMasterLedger(pay || []);
 }
 
 function renderMonthly(att, pay) {
-    const [y, m] = document.getElementById('salaryMonth').value.split('-');
-    const filteredAtt = att.filter(r => new Date(r.date + 'T00:00:00').getMonth()+1 == m && new Date(r.date + 'T00:00:00').getFullYear() == y);
-    const filteredPay = pay.filter(p => new Date(p.created_at + 'T00:00:00').getMonth()+1 == m && new Date(p.created_at + 'T00:00:00').getFullYear() == y);
+    const monthInput = document.getElementById('salaryMonth').value;
+    const filteredAtt = att.filter(r => r.normDate.startsWith(monthInput));
+    const filteredPay = pay.filter(p => p.normDate.startsWith(monthInput));
     document.getElementById('salaryTableContainer').innerHTML = generateTable(filteredAtt, filteredPay);
 }
 
 function renderRangeEarnings(att, pay) {
-    const start = new Date(document.getElementById('rangeStart').value + 'T00:00:00');
-    const end = new Date(document.getElementById('rangeEnd').value + 'T00:00:00');
-    end.setHours(23, 59, 59, 999);
-    
-    const filteredAtt = att.filter(r => {
-        const d = new Date(r.date + 'T00:00:00');
-        return d >= start && d <= end;
-    });
-    
-    const filteredPay = pay.filter(p => {
-        const d = new Date(p.created_at + 'T00:00:00');
-        return d >= start && d <= end;
-    });
-    
+    const start = document.getElementById('rangeStart').value;
+    const end = document.getElementById('rangeEnd').value;
+    const filteredAtt = att.filter(r => r.normDate >= start && r.normDate <= end);
+    const filteredPay = pay.filter(p => p.normDate >= start && p.normDate <= end);
     document.getElementById('rangeSalaryTableContainer').innerHTML = generateTable(filteredAtt, filteredPay);
 }
 
