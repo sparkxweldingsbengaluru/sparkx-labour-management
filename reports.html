@@ -80,6 +80,13 @@ const _supabase = supabase.createClient("https://fjzqscohyteznkehiqnf.supabase.c
 let labourList = JSON.parse(localStorage.getItem('labourList')) || [{id: "1", name: "Javed", wage: 1300}, {id: "2", name: "Arbaj", wage: 1000}];
 let appData = { att: [], pay: [] };
 
+// Convert "M/D/YYYY" to "YYYY-MM-DD"
+function parseDate(dateStr) {
+    if (!dateStr || !dateStr.includes('/')) return new Date(dateStr);
+    const [m, d, y] = dateStr.split('/');
+    return new Date(`${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`);
+}
+
 async function init() {
     const workerFilter = document.getElementById('filterWorker');
     const cycleFilter = document.getElementById('cycleWorker');
@@ -106,7 +113,7 @@ function generateReport() {
     end.setHours(23, 59, 59);
     const workerId = document.getElementById('filterWorker').value;
 
-    const fAtt = appData.att.filter(r => new Date(r.date) >= start && new Date(r.date) <= end);
+    const fAtt = appData.att.filter(r => parseDate(r.date) >= start && parseDate(r.date) <= end);
     const fPay = appData.pay.filter(p => new Date(p.created_at) >= start && new Date(p.created_at) <= end);
 
     let tbody = '';
@@ -123,7 +130,7 @@ function generateReport() {
     });
 
     let attHtml = '';
-    fAtt.sort((a, b) => new Date(b.date) - new Date(a.date)).forEach(r => {
+    fAtt.sort((a, b) => parseDate(b.date) - parseDate(a.date)).forEach(r => {
         if (workerId !== "All" && r.labourid !== workerId) return;
         const worker = labourList.find(w => w.id == r.labourid);
         attHtml += `<tr><td>${r.date}</td><td>${worker ? worker.name : "Unknown"}</td><td>${r.status}</td><td>${r.wageattime || ''} / ${r.otamount || 0}</td><td>${r.advance || 0}</td></tr>`;
@@ -150,7 +157,7 @@ function renderSettlementCycles() {
     settlements.forEach(s => {
         const startDate = prevDate ? new Date(prevDate.getTime() + 86400000) : new Date("2026-06-01");
         const endDate = new Date(s.created_at);
-        const wAtt = appData.att.filter(r => r.labourid == workerId && r.status == "Present" && new Date(r.date) >= startDate && new Date(r.date) <= endDate);
+        const wAtt = appData.att.filter(r => r.labourid == workerId && r.status == "Present" && parseDate(r.date) >= startDate && parseDate(r.date) <= endDate);
         const wPay = appData.pay.filter(p => p.labourid == workerId && new Date(p.created_at) > startDate && new Date(p.created_at) <= endDate);
         
         const days = wAtt.length;
