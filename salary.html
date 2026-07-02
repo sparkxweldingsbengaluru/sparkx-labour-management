@@ -79,19 +79,19 @@ async function refreshAllSalaryData() {
     const { data: att } = await _supabase.from('attendance_history').select('*');
     const { data: pay } = await _supabase.from('workshop_payouts').select('*').order('created_at', { ascending: false });
     
-    // Normalize dates to YYYY-MM-DD for reliable string comparison
+    // Create normalized data for range calculations
     const normAtt = (att || []).map(r => ({...r, normDate: r.date.split('T')[0]}));
     const normPay = (pay || []).map(p => ({...p, normDate: p.created_at.split('T')[0]}));
     
-    renderMonthly(normAtt, normPay);
+    renderMonthly(att || [], pay || []);
     renderRangeEarnings(normAtt, normPay);
     renderMasterLedger(pay || []);
 }
 
 function renderMonthly(att, pay) {
-    const monthInput = document.getElementById('salaryMonth').value; // e.g., "2026-07"
-    const filteredAtt = att.filter(r => r.normDate.startsWith(monthInput));
-    const filteredPay = pay.filter(p => p.normDate.startsWith(monthInput));
+    const [y, m] = document.getElementById('salaryMonth').value.split('-');
+    const filteredAtt = att.filter(r => new Date(r.date).getMonth()+1 == m && new Date(r.date).getFullYear() == y);
+    const filteredPay = pay.filter(p => new Date(p.created_at).getMonth()+1 == m && new Date(p.created_at).getFullYear() == y);
     document.getElementById('salaryTableContainer').innerHTML = generateTable(filteredAtt, filteredPay);
 }
 
