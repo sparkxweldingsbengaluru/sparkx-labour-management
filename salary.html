@@ -79,7 +79,7 @@ async function refreshAllSalaryData() {
     const { data: att } = await _supabase.from('attendance_history').select('*');
     const { data: pay } = await _supabase.from('workshop_payouts').select('*').order('created_at', { ascending: false });
     
-    // Normalize dates to YYYY-MM-DD strings for safe comparison
+    // Normalize dates to YYYY-MM-DD for reliable string comparison
     const normAtt = (att || []).map(r => ({...r, normDate: r.date.split('T')[0]}));
     const normPay = (pay || []).map(p => ({...p, normDate: p.created_at.split('T')[0]}));
     
@@ -89,7 +89,7 @@ async function refreshAllSalaryData() {
 }
 
 function renderMonthly(att, pay) {
-    const monthInput = document.getElementById('salaryMonth').value;
+    const monthInput = document.getElementById('salaryMonth').value; // e.g., "2026-07"
     const filteredAtt = att.filter(r => r.normDate.startsWith(monthInput));
     const filteredPay = pay.filter(p => p.normDate.startsWith(monthInput));
     document.getElementById('salaryTableContainer').innerHTML = generateTable(filteredAtt, filteredPay);
