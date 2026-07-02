@@ -44,7 +44,6 @@
             <input type="hidden" id="editingPayoutId">
             <select id="payoutWorker" required></select>
             <input type="number" id="payoutAmount" placeholder="Amount (₹)" required step="any">
-            <!-- NEW: Date Picker -->
             <input type="date" id="payoutDate" required>
             <select id="payoutType">
                 <option value="Final Settlement">Final Settlement</option>
@@ -67,7 +66,7 @@ window.onload = function() {
     document.getElementById('salaryMonth').value = today.substring(0, 7);
     document.getElementById('rangeStart').value = today.substring(0, 7) + "-01";
     document.getElementById('rangeEnd').value = today;
-    document.getElementById('payoutDate').value = today; // Set default to today
+    document.getElementById('payoutDate').value = today;
     
     const dropdown = document.getElementById('payoutWorker');
     labourList.forEach(w => {
@@ -86,17 +85,26 @@ async function refreshAllSalaryData() {
 
 function renderMonthly(att, pay) {
     const [y, m] = document.getElementById('salaryMonth').value.split('-');
-    const filteredAtt = att.filter(r => new Date(r.date).getMonth()+1 == m && new Date(r.date).getFullYear() == y);
-    const filteredPay = pay.filter(p => new Date(p.created_at).getMonth()+1 == m && new Date(p.created_at).getFullYear() == y);
+    const filteredAtt = att.filter(r => new Date(r.date + 'T00:00:00').getMonth()+1 == m && new Date(r.date + 'T00:00:00').getFullYear() == y);
+    const filteredPay = pay.filter(p => new Date(p.created_at + 'T00:00:00').getMonth()+1 == m && new Date(p.created_at + 'T00:00:00').getFullYear() == y);
     document.getElementById('salaryTableContainer').innerHTML = generateTable(filteredAtt, filteredPay);
 }
 
 function renderRangeEarnings(att, pay) {
-    const start = new Date(document.getElementById('rangeStart').value);
-    const end = new Date(document.getElementById('rangeEnd').value);
+    const start = new Date(document.getElementById('rangeStart').value + 'T00:00:00');
+    const end = new Date(document.getElementById('rangeEnd').value + 'T00:00:00');
     end.setHours(23, 59, 59, 999);
-    const filteredAtt = att.filter(r => new Date(r.date) >= start && new Date(r.date) <= end);
-    const filteredPay = pay.filter(p => new Date(p.created_at) >= start && new Date(p.created_at) <= end);
+    
+    const filteredAtt = att.filter(r => {
+        const d = new Date(r.date + 'T00:00:00');
+        return d >= start && d <= end;
+    });
+    
+    const filteredPay = pay.filter(p => {
+        const d = new Date(p.created_at + 'T00:00:00');
+        return d >= start && d <= end;
+    });
+    
     document.getElementById('rangeSalaryTableContainer').innerHTML = generateTable(filteredAtt, filteredPay);
 }
 
