@@ -61,6 +61,13 @@
 const _supabase = supabase.createClient("https://fjzqscohyteznkehiqnf.supabase.co", "sb_publishable_ER-PXAe4A1vsLDYETL4BKw_G7p24kTE");
 let labourList = JSON.parse(localStorage.getItem('labourList')) || [{id: "1", name: "Javed", wage: 1300}, {id: "2", name: "Arbaj", wage: 1000}];
 
+// Helper to convert "M/D/YYYY" to "YYYY-MM-DD"
+function normalizeDate(dateStr) {
+    if (!dateStr || !dateStr.includes('/')) return "";
+    const [m, d, y] = dateStr.split('/');
+    return `${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`;
+}
+
 window.onload = function() {
     let today = new Date().toISOString().split('T')[0];
     document.getElementById('salaryMonth').value = today.substring(0, 7);
@@ -79,19 +86,19 @@ async function refreshAllSalaryData() {
     const { data: att } = await _supabase.from('attendance_history').select('*');
     const { data: pay } = await _supabase.from('workshop_payouts').select('*').order('created_at', { ascending: false });
     
-    // Normalize dates for Table 2 (String matching is safer for range)
-    const normAtt = (att || []).map(r => ({...r, normDate: r.date.split('T')[0]}));
-    const normPay = (pay || []).map(p => ({...p, normDate: p.created_at.split('T')[0]}));
+    // Normalize dates for unified comparison
+    const normAtt = (att || []).map(r => ({...r, normDate: normalizeDate(r.date)}));
+    const normPay = (pay || []).map(p => ({...p, normDate: p.created_at ? p.created_at.split('T')[0] : ""}));
     
-    renderMonthly(att || [], pay || []); // Pass raw for Date object logic
-    renderRangeEarnings(normAtt, normPay); // Pass normalized for String logic
+    renderMonthly(normAtt, normPay);
+    renderRangeEarnings(normAtt, normPay);
     renderMasterLedger(pay || []);
 }
 
 function renderMonthly(att, pay) {
-    const [y, m] = document.getElementById('salaryMonth').value.split('-');
-    const filteredAtt = att.filter(r => new Date(r.date).getMonth()+1 == m && new Date(r.date).getFullYear() == y);
-    const filteredPay = pay.filter(p => new Date(p.created_at).getMonth()+1 == m && new Date(p.created_at).getFullYear() == y);
+    const monthInput = document.getElementById('salaryMonth').value; // "YYYY-MM"
+    const filteredAtt = att.filter(r => r.normDate.startsWith(monthInput));
+    const filteredPay = pay.filter(p => p.normDate.startsWith(monthInput));
     document.getElementById('salaryTableContainer').innerHTML = generateTable(filteredAtt, filteredPay);
 }
 
