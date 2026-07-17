@@ -115,10 +115,18 @@ function generateTable(attRows, payRows) {
     labourList.forEach(w => {
         const wAtt = attRows.filter(r => r.labourid == w.id && r.status == "Present");
         const wPay = payRows.filter(p => p.labourid == w.id);
+        
+        // Calculate gross (only present days)
         const gross = wAtt.reduce((sum, r) => sum + (parseFloat(r.wageattime)||w.wage) + (parseFloat(r.otamount)||0), 0);
-        const totalAdvances = wAtt.reduce((sum, r) => sum + (parseFloat(r.advance)||0), 0) + wPay.filter(p => p.type && p.type.toLowerCase().includes("advance")).reduce((s, p) => s + parseFloat(p.amount), 0);
+        
+        // Updated: Calculate advances from ALL attendance entries for this worker (Present or Absent)
+        const allWorkerAtt = attRows.filter(r => r.labourid == w.id);
+        const totalAdvances = allWorkerAtt.reduce((sum, r) => sum + (parseFloat(r.advance)||0), 0) + 
+                              wPay.filter(p => p.type && p.type.toLowerCase().includes("advance")).reduce((s, p) => s + parseFloat(p.amount), 0);
+        
         const totalSettlements = wPay.filter(p => p.type && p.type.toLowerCase().includes("settlement")).reduce((s, p) => s + parseFloat(p.amount), 0);
         const net = gross - totalAdvances - totalSettlements;
+        
         html += `<tr><td>${w.name}</td><td>₹${gross}</td><td>₹${totalAdvances}</td><td>₹${totalSettlements}</td><td style="font-weight:bold; color:${net<0?'red':'green'}">₹${net}</td></tr>`;
     });
     return html + `</table>`;
