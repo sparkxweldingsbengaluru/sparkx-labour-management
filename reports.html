@@ -80,7 +80,6 @@ const _supabase = supabase.createClient("https://fjzqscohyteznkehiqnf.supabase.c
 let labourList = JSON.parse(localStorage.getItem('labourList')) || [{id: "1", name: "Javed", wage: 1300}, {id: "2", name: "Arbaj", wage: 1000}];
 let appData = { att: [], pay: [] };
 
-// Convert "M/D/YYYY" to "YYYY-MM-DD"
 function parseDate(dateStr) {
     if (!dateStr || !dateStr.includes('/')) return new Date(dateStr);
     const [m, d, y] = dateStr.split('/');
@@ -123,7 +122,11 @@ function generateReport() {
         const wAtt = fAtt.filter(r => r.labourid == w.id && r.status == "Present");
         const wPay = fPay.filter(p => p.labourid == w.id);
         const gross = wAtt.reduce((sum, r) => sum + (parseFloat(r.wageattime)||w.wage) + (parseFloat(r.otamount)||0), 0);
-        const totalAdv = wAtt.reduce((sum, r) => sum + (parseFloat(r.advance)||0), 0) + wPay.filter(p => p.type && p.type.toLowerCase().includes("advance")).reduce((s, p) => s + parseFloat(p.amount), 0);
+        
+        // Fixed: Use all attendance records (including Absent) to calculate advances
+        const allWAtt = fAtt.filter(r => r.labourid == w.id);
+        const totalAdv = allWAtt.reduce((sum, r) => sum + (parseFloat(r.advance)||0), 0) + wPay.filter(p => p.type && p.type.toLowerCase().includes("advance")).reduce((s, p) => s + parseFloat(p.amount), 0);
+        
         const set = wPay.filter(p => p.type && p.type.toLowerCase().includes("settlement")).reduce((s, p) => s + parseFloat(p.amount), 0);
         totals.gross += gross; totals.adv += totalAdv; totals.set += set;
         tbody += `<tr><td>${w.name}</td><td>₹${gross}</td><td>₹${totalAdv}</td><td>₹${set}</td><td style="font-weight:bold;">₹${gross - totalAdv - set}</td></tr>`;
@@ -163,7 +166,7 @@ function renderSettlementCycles() {
         const days = wAtt.length;
         const gross = wAtt.reduce((sum, r) => sum + (parseFloat(r.wageattime)||w.wage), 0);
         const ot = wAtt.reduce((sum, r) => sum + (parseFloat(r.otamount)||0), 0);
-        const adv = wAtt.reduce((sum, r) => sum + (parseFloat(r.advance)||0), 0) + wPay.filter(p => p.type.toLowerCase().includes("advance")).reduce((s, p) => s + parseFloat(p.amount), 0);
+        const adv = appData.att.filter(r => r.labourid == workerId && parseDate(r.date) >= startDate && parseDate(r.date) <= endDate).reduce((sum, r) => sum + (parseFloat(r.advance)||0), 0) + wPay.filter(p => p.type.toLowerCase().includes("advance")).reduce((s, p) => s + parseFloat(p.amount), 0);
 
         html += `<tr>
             <td>${startDate.toLocaleDateString()} to ${endDate.toLocaleDateString()}</td>
