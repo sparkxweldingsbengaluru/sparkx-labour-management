@@ -15,6 +15,73 @@
         .worker-card { padding: 10px; border: 1px solid #ddd; margin-top: 10px; border-radius: 5px; text-align: left; position: relative; }
         .badge { background: #2e7d32; color: white; padding: 2px 8px; border-radius: 4px; font-size: 11px; float: right; }
         .badge-absent { background: #d32f2f; }
+
+        /* Sparkx Custom Bottom Widget Styles */
+        .sparkx-bottom-widget {
+            grid-column: 1 / -1;
+            width: 100%;
+            max-width: 900px;
+            margin: 30px auto 0 auto;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 8px 16px rgba(0,0,0,0.2);
+            background: #111;
+        }
+
+        .sparkx-hero-card {
+            position: relative;
+            width: 100%;
+            max-height: 450px;
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .hero-img {
+            width: 100%;
+            height: auto;
+            object-fit: cover;
+            display: block;
+        }
+
+        .welding-spark-spot {
+            position: absolute;
+            top: 42%;
+            left: 20%;
+            width: 15px;
+            height: 15px;
+            background: #fff;
+            border-radius: 50%;
+            box-shadow: 0 0 15px #00b0ff, 0 0 30px #ff9800, 0 0 45px #ffeb3b;
+            animation: torch-flicker 0.2s infinite alternate;
+        }
+
+        @keyframes torch-flicker {
+            0% { transform: scale(0.9); opacity: 0.8; }
+            100% { transform: scale(1.2); opacity: 1; }
+        }
+
+        .hero-message-box {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            background: rgba(26, 35, 126, 0.88);
+            color: white;
+            padding: 15px;
+            text-align: center;
+            box-sizing: border-box;
+            backdrop-filter: blur(4px);
+            border-top: 2px solid #ff9800;
+        }
+
+        .hero-message-box p {
+            margin: 0;
+            font-size: 0.95rem;
+            font-weight: 500;
+            transition: opacity 0.5s ease-in-out;
+        }
     </style>
 </head>
 <body>
@@ -43,6 +110,17 @@
         <h3>View Daily Work History</h3>
         <input type="date" id="historyFilterDate" onchange="loadDailyHistory()" style="width: 100%; padding: 8px; margin-bottom: 10px;">
         <div id="dailyHistoryContainer"></div>
+    </div>
+
+    <!-- Integrated Sparkx Hero Widget at Bottom -->
+    <div class="sparkx-bottom-widget">
+        <div class="sparkx-hero-card">
+            <img src="welder.png" alt="Sparkx Welder" class="hero-img">
+            <div class="welding-spark-spot"></div>
+            <div class="hero-message-box">
+                <p id="animatedQuote">Precision in every weld, strength in every structure.</p>
+            </div>
+        </div>
     </div>
 </div>
 
@@ -132,6 +210,31 @@ async function loadDailyHistory() {
         `;
     }).join('');
 }
+
+// Motivational Message Ticker Script
+const dashboardQuotes = [
+    "Precision in every weld, strength in every structure.",
+    "Quality work today is the foundation of tomorrow's reputation.",
+    "A smooth sea never made a skilled welder. Keep pushing forward!",
+    "Measure twice, cut once, and build with pride.",
+    "Small progress every day adds up to massive business growth."
+];
+
+let currentQuoteIndex = 0;
+function rotateDashboardQuotes() {
+    const quoteElement = document.getElementById('animatedQuote');
+    if (!quoteElement) return;
+
+    quoteElement.style.opacity = 0;
+
+    setTimeout(() => {
+        currentQuoteIndex = (currentQuoteIndex + 1) % dashboardQuotes.length;
+        quoteElement.innerText = dashboardQuotes[currentQuoteIndex];
+        quoteElement.style.opacity = 1;
+    }, 500);
+}
+
+setInterval(rotateDashboardQuotes, 5000);
 </script>
 </body>
 </html>
