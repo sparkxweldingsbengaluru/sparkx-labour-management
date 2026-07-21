@@ -227,30 +227,7 @@ async function loadDailyHistory() {
     }).join('');
 }
 
-// Motivational Message Ticker Script
-const dashboardQuotes = [
-    "Precision in every weld, strength in every structure.",
-    "Quality work today is the foundation of tomorrow's reputation.",
-    "A smooth sea never made a skilled welder. Keep pushing forward!",
-    "Measure twice, cut once, and build with pride.",
-    "Small progress every day adds up to massive business growth."
-];
 
-let currentQuoteIndex = 0;
-function rotateDashboardQuotes() {
-    const quoteElement = document.getElementById('animatedQuote');
-    if (!quoteElement) return;
-
-    quoteElement.style.opacity = 0;
-
-    setTimeout(() => {
-        currentQuoteIndex = (currentQuoteIndex + 1) % dashboardQuotes.length;
-        quoteElement.innerText = dashboardQuotes[currentQuoteIndex];
-        quoteElement.style.opacity = 1;
-    }, 500);
-}
-
-setInterval(rotateDashboardQuotes, 5000);
 </script>
 </body>
 </html>
