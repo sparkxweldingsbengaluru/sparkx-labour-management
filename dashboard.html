@@ -19,7 +19,6 @@
             position: relative;
         }
 
-        /* Light, subtle dimming across the image so your white text stays sharp everywhere */
         body::before {
             content: '';
             position: fixed;
@@ -74,34 +73,6 @@
         .worker-card { padding: 10px; border: 1px solid #ddd; margin-top: 10px; border-radius: 5px; text-align: left; position: relative; background: #fff; }
         .badge { background: #2e7d32; color: white; padding: 2px 8px; border-radius: 4px; font-size: 11px; float: right; }
         .badge-absent { background: #d32f2f; }
-
-        /* Dynamic Ticker Widget at Bottom */
-        .sparkx-bottom-widget {
-            width: 100%;
-            max-width: 500px;
-            margin: 40px auto 20px auto;
-            border-radius: 12px;
-            overflow: hidden;
-            box-shadow: 0 8px 25px rgba(0,0,0,0.4);
-            background: rgba(26, 35, 126, 0.92);
-            backdrop-filter: blur(8px);
-            border: 1px solid rgba(255, 255, 255, 0.25);
-        }
-
-        .hero-message-box {
-            width: 100%;
-            color: white;
-            padding: 15px;
-            text-align: center;
-            box-sizing: border-box;
-        }
-
-        .hero-message-box p {
-            margin: 0;
-            font-size: 0.95rem;
-            font-weight: 500;
-            transition: opacity 0.5s ease-in-out;
-        }
     </style>
 </head>
 <body>
@@ -130,13 +101,6 @@
         <h3 style="color: #111; margin-top: 0; text-shadow: none;">View Daily Work History</h3>
         <input type="date" id="historyFilterDate" onchange="loadDailyHistory()" style="width: 100%; padding: 8px; margin-bottom: 10px; box-sizing: border-box;">
         <div id="dailyHistoryContainer"></div>
-    </div>
-
-    <!-- Quote Ticker Widget at Bottom -->
-    <div class="sparkx-bottom-widget">
-        <div class="hero-message-box">
-            <p id="animatedQuote">Precision in every weld, strength in every structure.</p>
-        </div>
     </div>
 </div>
 
@@ -226,8 +190,6 @@ async function loadDailyHistory() {
         `;
     }).join('');
 }
-
-
 </script>
 </body>
 </html>
