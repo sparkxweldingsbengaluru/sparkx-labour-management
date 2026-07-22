@@ -19,6 +19,7 @@
         <a href="labour.html">👷 Labour</a>
         <a href="attendance.html">📅 Attendance</a>
         <a href="salary.html">💰 Salary</a>
+        <a href="purchase_book.html">🛒 Purchase Book</a>
         <a href="reports.html">📄 Reports</a>
         <a href="index.html">Logout</a>
     </div>
@@ -122,7 +123,7 @@ function generateTable(attRows, payRows) {
         // Updated: Calculate advances from ALL attendance entries for this worker (Present or Absent)
         const allWorkerAtt = attRows.filter(r => r.labourid == w.id);
         const totalAdvances = allWorkerAtt.reduce((sum, r) => sum + (parseFloat(r.advance)||0), 0) + 
-                              wPay.filter(p => p.type && p.type.toLowerCase().includes("advance")).reduce((s, p) => s + parseFloat(p.amount), 0);
+                            wPay.filter(p => p.type && p.type.toLowerCase().includes("advance")).reduce((s, p) => s + parseFloat(p.amount), 0);
         
         const totalSettlements = wPay.filter(p => p.type && p.type.toLowerCase().includes("settlement")).reduce((s, p) => s + parseFloat(p.amount), 0);
         const net = gross - totalAdvances - totalSettlements;
