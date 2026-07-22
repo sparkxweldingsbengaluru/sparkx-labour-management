@@ -14,10 +14,11 @@
         <a href="labour.html">👷 Labour</a>
         <a href="attendance.html">📅 Attendance</a>
         <a href="salary.html">💰 Salary</a>
+        <a href="purchase_book.html">🛒 Purchase Book</a>
         <a href="reports.html">📄 Reports</a>
         <a href="index.html">Logout</a>
     </div>
-      
+    
     <h1>Sparkx Welding and Fabrications Bengaluru</h1>
     <h2>Attendance Entry (Cloud Database Sync)</h2>
 
@@ -71,7 +72,6 @@
 <script>
 // Cloud Database Connection Keys
 const SUPABASE_URL = "https://fjzqscohyteznkehiqnf.supabase.co"; 
-// ⚠️ Paste your long key from Screenshot (8).png between these quotes:
 const SUPABASE_KEY = "sb_publishable_ER-PXAe4A1vsLDYETL4BKw_G7p24kTE"; 
 
 const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -139,7 +139,6 @@ function toggleTimeFields() {
     }
 }
 
-// Fixed to use lowercase parameters matching database columns
 async function renderRecentEntries() {
     const container = document.getElementById('recentEntriesContainer');
     const titleEl = document.getElementById('recentTitle');
@@ -183,7 +182,6 @@ async function renderRecentEntries() {
     });
 }
 
-// Fixed to match database lowercase schema format
 document.getElementById('attendanceForm').addEventListener('submit', async function(e) {
     e.preventDefault();
     const saveBtn = document.getElementById('saveBtn');
