@@ -14,10 +14,11 @@
         <a href="labour.html">👷 Labour</a>
         <a href="attendance.html">📅 Attendance</a>
         <a href="salary.html">💰 Salary</a>
+        <a href="purchase_book.html">🛒 Purchase Book</a>
         <a href="reports.html">📄 Reports</a>
         <a href="index.html">Logout</a>
     </div>
-      
+    
     <h1>Sparkx Welding and Fabrications Bengaluru</h1>
     <h2>Labour Directory (Cloud Database Sync)</h2>
 
@@ -49,7 +50,6 @@
 <script>
 // Cloud Database Connection Keys
 const SUPABASE_URL = "https://fjzqscohyteznkehiqnf.supabase.co"; 
-// ⚠️ Paste your long key from your settings screen between these quotes:
 const SUPABASE_KEY = "sb_publishable_ER-PXAe4A1vsLDYETL4BKw_G7p24kTE"; 
 
 const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -72,7 +72,6 @@ async function fetchLabourList() {
         return;
     }
 
-    // Keep local storage updated simultaneously as a backup cache for dropdown menus
     localStorage.setItem('labourList', JSON.stringify(workers));
 
     if (!workers || workers.length === 0) {
@@ -109,7 +108,6 @@ document.getElementById('labourForm').addEventListener('submit', async function(
     saveBtn.textContent = "SAVING TO CLOUD...";
 
     if (editId) {
-        // Updating an existing worker row
         const { error } = await _supabase
             .from('labour_list')
             .update({ name: name, wage: wage })
@@ -122,7 +120,6 @@ document.getElementById('labourForm').addEventListener('submit', async function(
             resetForm();
         }
     } else {
-        // Adding a completely new worker row
         const newId = "LAB_" + Date.now();
         const { error } = await _supabase
             .from('labour_list')
