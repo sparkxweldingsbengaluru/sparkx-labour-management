@@ -143,8 +143,8 @@
                 <div>
                     <label style="color:#333; font-size:12px;">Type</label>
                     <select id="entryType">
+                        <option value="purchase" selected>Material Purchase</option>
                         <option value="advance">Advance Received</option>
-                        <option value="purchase">Material Purchase</option>
                     </select>
                 </div>
                 <div>
@@ -190,7 +190,7 @@ window.onload = function() {
 async function loadAllSites() {
     document.getElementById('sitesGridContainer').innerHTML = "<p style='color:white;'>Loading sites...</p>";
     
-    const { data, error } = await _supabase.from('purchase_book').select('*');
+    const { data, error } = await _supabase.from('purchase_book').select('*').order('id', { ascending: false });
     if (error) {
         console.error(error);
         return;
@@ -251,12 +251,13 @@ function openSite(siteName) {
     document.getElementById('sitesView').style.display = 'none';
     document.getElementById('siteDetailView').style.display = 'block';
     document.getElementById('currentSiteTitle').innerText = siteName + " Ledger";
+    document.getElementById('entryType').value = "purchase";
     
     renderSiteLedger();
 }
 
 function renderSiteLedger() {
-    const siteData = allLedgerData.filter(row => row.site_name === currentSite).sort((a, b) => new Date(b.date) - new Date(a.date));
+    const siteData = allLedgerData.filter(row => row.site_name === currentSite).sort((a, b) => b.id - a.id);
     
     let totAdv = 0;
     let totPur = 0;
@@ -308,7 +309,7 @@ async function addEntry() {
         document.getElementById('entryAmount').value = "";
         document.getElementById('entryItems').value = "";
         // Refresh local data array and re-render
-        if(data && data.length > 0) allLedgerData.push(data[0]);
+        if(data && data.length > 0) allLedgerData.unshift(data[0]);
         renderSiteLedger();
     }
 }
