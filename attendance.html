@@ -2,243 +2,293 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Sparkx Attendance</title>
     <link rel="stylesheet" href="style.css">
     <!-- Links your app to the free global Supabase engine -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         :root {
-            --primary-color: #0d47a1;
-            --primary-hover: #083378;
-            --bg-color: #f4f6f9;
+            --primary: #2563eb;
+            --primary-hover: #1d4ed8;
+            --primary-light: #eff6ff;
+            --bg-surface: #f8fafc;
             --card-bg: #ffffff;
-            --text-main: #1f2937;
-            --text-muted: #6b7280;
-            --border-color: #e5e7eb;
-            --danger-color: #dc2626;
-            --success-color: #16a34a;
+            --text-main: #0f172a;
+            --text-sub: #475569;
+            --border: #e2e8f0;
+            --success-bg: #dcfce7;
+            --success-text: #15803d;
+            --danger-bg: #ffe4e6;
+            --danger-text: #be123c;
+            --radius-lg: 16px;
+            --radius-md: 10px;
+            --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+            --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+        }
+
+        * {
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
         }
 
         body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            background-color: var(--bg-color);
+            font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, sans-serif;
+            background-color: var(--bg-surface);
             color: var(--text-main);
             margin: 0;
-            padding: 20px;
-            line-height: 1.5;
+            padding: 12px;
+            display: flex;
+            justify-content: center;
         }
 
         .container {
-            max-width: 900px;
+            width: 100%;
+            max-width: 600px; /* Optimal reading/touch width for mobile & tablet */
             margin: 0 auto;
         }
 
-        /* Navigation Menu */
+        /* Mobile-first Horizontal Scroll Navigation */
         .menu {
             display: flex;
-            flex-wrap: wrap;
-            gap: 10px;
-            background: var(--card-bg);
-            padding: 12px 16px;
-            border-radius: 10px;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.08);
-            margin-bottom: 24px;
+            gap: 8px;
+            overflow-x: auto;
+            white-space: nowrap;
+            padding: 6px 4px 12px 4px;
+            margin-bottom: 12px;
+            -webkit-overflow-scrolling: touch;
+            scrollbar-width: none; /* Firefox */
+        }
+
+        .menu::-webkit-scrollbar {
+            display: none; /* Chrome/Safari */
         }
 
         .menu a {
             text-decoration: none;
-            color: var(--text-main);
-            font-weight: 500;
-            padding: 8px 14px;
-            border-radius: 6px;
-            transition: background-color 0.2s, color 0.2s;
+            color: var(--text-sub);
+            font-weight: 600;
             font-size: 14px;
+            padding: 10px 16px;
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 30px;
+            box-shadow: var(--shadow-sm);
+            transition: all 0.2s ease;
+            display: inline-flex;
+            align-items: center;
         }
 
-        .menu a:hover {
-            background-color: #eff6ff;
-            color: var(--primary-color);
+        .menu a:active {
+            transform: scale(0.96);
         }
 
         .menu a[href="attendance.html"] {
-            background-color: var(--primary-color);
+            background: var(--primary);
             color: #ffffff;
+            border-color: var(--primary);
         }
 
-        /* Header Styling */
-        .header-section {
-            margin-bottom: 24px;
+        /* App Header */
+        .header-card {
+            background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%);
+            color: white;
+            padding: 20px;
+            border-radius: var(--radius-lg);
+            margin-bottom: 16px;
+            box-shadow: var(--shadow-md);
         }
 
-        h1 {
-            font-size: 24px;
-            font-weight: 700;
-            color: var(--primary-color);
+        .header-card h1 {
+            font-size: 18px;
+            font-weight: 800;
             margin: 0 0 4px 0;
+            letter-spacing: -0.02em;
         }
 
-        h2 {
-            font-size: 15px;
+        .header-card h2 {
+            font-size: 13px;
             font-weight: 500;
-            color: var(--text-muted);
             margin: 0;
+            opacity: 0.85;
         }
 
-        /* Card / Form Container */
+        /* Main Form Card */
         .login-box {
             background: var(--card-bg);
-            border-radius: 12px;
-            padding: 24px;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
-            border: 1px solid var(--border-color);
+            border-radius: var(--radius-lg);
+            padding: 20px;
+            border: 1px solid var(--border);
+            box-shadow: var(--shadow-md);
         }
 
-        /* Form Controls */
+        /* Form Inputs & Controls */
         .form-group {
             margin-bottom: 16px;
         }
 
         .form-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-            gap: 16px;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+        }
+
+        @media (max-width: 420px) {
+            .form-grid {
+                grid-template-columns: 1fr; /* Stack on very small screens */
+            }
         }
 
         label {
             display: block;
-            font-weight: 600;
-            font-size: 13px;
-            color: var(--text-main);
+            font-weight: 700;
+            font-size: 12px;
+            color: var(--text-sub);
             margin-bottom: 6px;
             text-transform: uppercase;
-            letter-spacing: 0.025em;
+            letter-spacing: 0.05em;
         }
 
+        /* 16px font-size stops iOS auto-zoom on field focus */
         input[type="date"],
         input[type="number"],
         select {
             width: 100%;
-            padding: 10px 12px;
-            font-size: 15px;
-            border: 1px solid #d1d5db;
-            border-radius: 8px;
-            box-sizing: border-box;
-            background-color: #fff;
+            height: 48px; /* Touch target minimum standard */
+            padding: 0 14px;
+            font-size: 16px; 
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md);
+            background-color: #f8fafc;
             color: var(--text-main);
-            transition: border-color 0.2s, box-shadow 0.2s;
+            font-weight: 500;
+            transition: all 0.2s ease;
+            appearance: none;
+            -webkit-appearance: none;
         }
 
-        input[type="date"]:focus,
-        input[type="number"]:focus,
-        select:focus {
+        select {
+            background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%475569' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'><path d='m6 9 6 6 6-6'/></svg>");
+            background-repeat: no-repeat;
+            background-position: right 14px center;
+            padding-right: 40px;
+        }
+
+        input:focus, select:focus {
             outline: none;
-            border-color: var(--primary-color);
-            box-shadow: 0 0 0 3px rgba(13, 71, 161, 0.15);
+            border-color: var(--primary);
+            background-color: #ffffff;
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
         }
 
         #attendanceDate {
-            font-weight: 600;
-            color: var(--primary-color);
-            border: 2px solid var(--primary-color);
-            background-color: #f0f7ff;
-        }
-
-        /* Buttons */
-        button[type="submit"] {
-            width: 100%;
-            background-color: var(--primary-color);
-            color: white;
-            border: none;
-            padding: 12px 20px;
-            font-size: 15px;
-            font-weight: 600;
-            border-radius: 8px;
-            cursor: pointer;
-            transition: background-color 0.2s, transform 0.1s;
-            margin-top: 10px;
-        }
-
-        button[type="submit"]:hover {
-            background-color: var(--primary-hover);
-        }
-
-        button[type="submit"]:disabled {
-            background-color: #9ca3af;
-            cursor: not-allowed;
+            font-weight: 700;
+            color: var(--primary);
+            border: 2px solid var(--primary);
+            background-color: var(--primary-light);
         }
 
         .divider {
             border: 0;
             height: 1px;
-            background: var(--border-color);
-            margin: 24px 0;
+            background: var(--border);
+            margin: 20px 0;
         }
 
-        /* Recent Entries Container */
-        h3 {
+        /* Submit Button */
+        button[type="submit"] {
+            width: 100%;
+            height: 52px;
+            background-color: var(--primary);
+            color: white;
+            border: none;
             font-size: 16px;
-            font-weight: 600;
+            font-weight: 700;
+            border-radius: var(--radius-md);
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.25);
+            transition: all 0.2s ease;
+            margin-top: 8px;
+        }
+
+        button[type="submit"]:active {
+            transform: scale(0.98);
+            background-color: var(--primary-hover);
+        }
+
+        button[type="submit"]:disabled {
+            background-color: #94a3b8;
+            box-shadow: none;
+            cursor: not-allowed;
+        }
+
+        /* Recent Entries Section */
+        h3 {
+            font-size: 15px;
+            font-weight: 700;
             margin: 0 0 12px 0;
+            color: var(--text-main);
         }
 
         #recentEntriesContainer {
-            max-height: 280px;
+            max-height: 320px;
             overflow-y: auto;
-            border: 1px solid var(--border-color);
-            padding: 12px;
-            border-radius: 8px;
-            background: #f9fafb;
+            border-radius: var(--radius-md);
+            background: #f8fafc;
+            padding: 8px;
+            border: 1px solid var(--border);
         }
 
-        /* Entry Item Card */
+        /* Modern List Cards */
         .entry-card {
-            background: #ffffff;
-            border: 1px solid var(--border-color);
-            padding: 12px;
-            border-radius: 6px;
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            padding: 14px;
+            border-radius: var(--radius-md);
             margin-bottom: 8px;
             display: flex;
             justify-content: space-between;
             align-items: center;
+            box-shadow: var(--shadow-sm);
         }
 
         .entry-card:last-child {
             margin-bottom: 0;
         }
 
-        .badge-present {
-            color: var(--success-color);
-            background: #dcfce7;
-            padding: 2px 8px;
-            border-radius: 4px;
+        .badge {
+            display: inline-block;
+            padding: 3px 10px;
+            border-radius: 20px;
             font-size: 12px;
-            font-weight: 600;
+            font-weight: 700;
+            text-transform: uppercase;
+        }
+
+        .badge-present {
+            background: var(--success-bg);
+            color: var(--success-text);
         }
 
         .badge-absent {
-            color: var(--danger-color);
-            background: #fee2e2;
-            padding: 2px 8px;
-            border-radius: 4px;
-            font-size: 12px;
-            font-weight: 600;
+            background: var(--danger-bg);
+            color: var(--danger-text);
         }
 
         .btn-delete {
-            background: #fee2e2;
-            color: var(--danger-color);
-            border: 1px solid #fca5a5;
-            padding: 6px 12px;
-            font-size: 12px;
+            background: #fff1f2;
+            color: var(--danger-text);
+            border: 1px solid #fecdd3;
+            padding: 8px 14px;
+            font-size: 13px;
             font-weight: 600;
-            border-radius: 6px;
+            border-radius: 8px;
             cursor: pointer;
-            transition: background 0.2s;
+            transition: all 0.2s ease;
         }
 
-        .btn-delete:hover {
-            background: var(--danger-color);
+        .btn-delete:active {
+            background: var(--danger-text);
             color: #ffffff;
         }
     </style>
@@ -256,9 +306,9 @@
         <a href="index.html">Logout</a>
     </nav>
     
-    <div class="header-section">
-        <h1>Sparkx Welding and Fabrications Bengaluru</h1>
-        <h2>Attendance Entry (Cloud Database Sync)</h2>
+    <div class="header-card">
+        <h1>Sparkx Welding & Fabrications</h1>
+        <h2>Attendance Entry System</h2>
     </div>
 
     <div class="login-box">
@@ -322,7 +372,7 @@
         
         <h3 id="recentTitle">Entries for this Date</h3>
         <div id="recentEntriesContainer">
-            <p style="color: gray; font-style: italic;">Loading cloud database records...</p>
+            <p style="color: #64748b; font-style: italic; font-size: 14px; text-align: center; margin: 16px 0;">Loading cloud database records...</p>
         </div>
     </div>
 </div>
@@ -408,7 +458,7 @@ async function renderRecentEntries() {
     let targetDateStr = new Date(y, m - 1, d).toLocaleDateString();
     titleEl.textContent = `Entries for ${targetDateStr}`;
     
-    container.innerHTML = '<p style="color: gray; font-style: italic;">Fetching records from cloud...</p>';
+    container.innerHTML = '<p style="color: #64748b; font-style: italic; font-size: 14px; text-align: center; margin: 16px 0;">Fetching records from cloud...</p>';
 
     const { data: history, error } = await _supabase
         .from('attendance_history')
@@ -416,13 +466,13 @@ async function renderRecentEntries() {
         .eq('date', targetDateStr);
 
     if (error) {
-        container.innerHTML = `<p style="color: var(--danger-color);">Cloud Error: ${error.message}</p>`;
+        container.innerHTML = `<p style="color: var(--danger-text); font-size: 14px; text-align: center;">Cloud Error: ${error.message}</p>`;
         return;
     }
 
     container.innerHTML = '';
     if (!history || history.length === 0) {
-        container.innerHTML = '<p style="color: gray; font-style: italic;">No entries made for this date yet.</p>';
+        container.innerHTML = '<p style="color: #64748b; font-style: italic; font-size: 14px; text-align: center; margin: 16px 0;">No entries made for this date yet.</p>';
         return;
     }
     
@@ -435,13 +485,13 @@ async function renderRecentEntries() {
         
         div.innerHTML = `
             <div>
-                <div style="margin-bottom: 4px;">
-                    <strong style="font-size: 15px;">${record.name}</strong> 
-                    <span class="${badgeClass}">${record.status}</span>
+                <div style="margin-bottom: 4px; display: flex; align-items: center; gap: 8px;">
+                    <strong style="font-size: 15px; color: var(--text-main);">${record.name}</strong> 
+                    <span class="badge ${badgeClass}">${record.status}</span>
                 </div>
-                ${isPresent ? `<div style="font-size: 13px; color: var(--text-muted);">In: ${record.intime} | Out: ${record.outtime}</div>` : ''}
-                <div style="font-size: 13px; color: var(--text-main); font-weight: 500; margin-top: 2px;">
-                    OT: ₹${record.otamount} | Adv: ₹${record.advance}
+                ${isPresent ? `<div style="font-size: 13px; color: var(--text-sub);">In: <b>${record.intime}</b> | Out: <b>${record.outtime}</b></div>` : ''}
+                <div style="font-size: 13px; color: var(--text-main); font-weight: 600; margin-top: 3px;">
+                    OT: ₹${record.otamount} &bull; Adv: ₹${record.advance}
                 </div>
             </div>
             <button class="btn-delete" onclick="deleteAttendance('${record.entryid}')">Delete</button>
