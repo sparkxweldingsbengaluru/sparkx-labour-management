@@ -341,8 +341,8 @@
                 <div class="input-group">
                     <label>Type</label>
                     <select id="payoutType">
-                        <option value="Advances">Advance Payment</option>
-                        <option value="Final Settlement">Final Settlement</option>
+                        <option value="Final Payment">Final Payment</option>
+                        <option value="Advance Payment">Advance Payment</option>
                     </select>
                 </div>
                 <div class="input-group" style="grid-column: 1 / -1;">
@@ -482,7 +482,7 @@ function generateTable(attRows, payRows) {
         const totalAdvances = allWorkerAtt.reduce((sum, r) => sum + (parseFloat(r.advance)||0), 0) + 
                               wPay.filter(p => p.type && p.type.toLowerCase().includes("advance")).reduce((s, p) => s + parseFloat(p.amount), 0);
         
-        const totalSettlements = wPay.filter(p => p.type && p.type.toLowerCase().includes("settlement")).reduce((s, p) => s + parseFloat(p.amount), 0);
+        const totalSettlements = wPay.filter(p => p.type && (p.type.toLowerCase().includes("settlement") || p.type.toLowerCase().includes("final"))).reduce((s, p) => s + parseFloat(p.amount), 0);
         const net = gross - totalAdvances - totalSettlements;
         
         const netClass = net < 0 ? 'amount-negative' : 'amount-positive';
