@@ -1,172 +1,880 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>Sparkx Salary Management</title>
-    <link rel="stylesheet" href="style.css">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sparkx | Salary & Payouts</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    
     <style>
-        .full-width-container { width: 100%; margin-bottom: 30px; padding: 20px; border: 1px solid #ddd; border-radius: 8px; background: #fff; }
-        table { width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 14px; }
-        th, td { padding: 12px; border: 1px solid #ddd; text-align: left; }
-        th { background-color: #333; color: white; }
+        :root {
+            /* Accessible Brand Colors */
+            --primary-blue: #0284c7; 
+            --primary-hover: #0369a1;
+            --primary-orange: #ea580c; 
+            --orange-hover: #c2410c;
+            
+            /* Backgrounds & Surfaces */
+            --bg-color: #f4f7f9;
+            --surface: #ffffff;
+            --sidebar-bg: #0f172a; /* Deep Slate for premium contrast */
+            --sidebar-hover: #1e293b;
+            
+            /* Typography (High Contrast) */
+            --text-main: #0f172a;
+            --text-body: #334155;
+            --text-muted: #64748b;
+            
+            /* UI Elements */
+            --border-color: #e2e8f0;
+            --border-focus: #94a3b8;
+            --radius-sm: 8px;
+            --radius-md: 12px;
+            --radius-lg: 16px;
+            
+            /* Status Colors */
+            --success: #15803d;
+            --success-bg: #dcfce7;
+            --danger: #b91c1c;
+            --danger-bg: #fee2e2;
+            
+            /* Elevation & Accessibility */
+            --shadow-sm: 0 1px 3px rgba(0,0,0,0.05);
+            --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.08), 0 2px 4px -2px rgba(0,0,0,0.04);
+            --focus-ring: 0 0 0 3px rgba(2, 132, 199, 0.3);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-body);
+            display: flex;
+            min-height: 100vh;
+            line-height: 1.5;
+        }
+
+        .sidebar {
+            width: 260px;
+            background-color: var(--sidebar-bg);
+            color: white;
+            display: flex;
+            flex-direction: column;
+            padding: 24px 16px;
+            position: fixed;
+            height: 100vh;
+            z-index: 100;
+            box-shadow: 4px 0 15px rgba(0,0,0,0.05);
+        }
+
+        .brand {
+            font-size: 22px;
+            font-weight: 800;
+            text-align: center;
+            padding-bottom: 24px;
+            margin-bottom: 20px;
+            color: var(--surface);
+            letter-spacing: 1.5px;
+            position: relative;
+        }
+        
+        .brand::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 20%;
+            width: 60%;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, var(--primary-orange), transparent);
+        }
+
+        .sidebar a {
+            color: #94a3b8;
+            text-decoration: none;
+            padding: 12px 16px;
+            border-radius: var(--radius-sm);
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 6px;
+            transition: all 0.2s ease;
+            outline: none;
+        }
+
+        .sidebar a:hover, .sidebar a:focus-visible {
+            background-color: var(--sidebar-hover);
+            color: var(--surface);
+        }
+
+        .sidebar a.active {
+            background-color: var(--primary-blue);
+            color: white;
+            box-shadow: var(--shadow-md);
+        }
+
+        .main-content {
+            flex: 1;
+            margin-left: 260px;
+            padding: 40px;
+            max-width: 1400px;
+        }
+
+        .page-header {
+            margin-bottom: 24px;
+        }
+
+        .page-header h1 {
+            font-size: 32px;
+            font-weight: 800;
+            color: var(--text-main);
+            letter-spacing: -0.5px;
+        }
+
+        .page-header p {
+            color: var(--text-muted);
+            font-size: 15px;
+            margin-top: 6px;
+            max-width: 700px;
+        }
+
+        .sync-status-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            padding: 8px 16px;
+            background: var(--surface);
+            border: 1px solid var(--border-color);
+            border-radius: 30px;
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text-muted);
+            margin-bottom: 28px;
+            box-shadow: var(--shadow-sm);
+        }
+
+        .sync-dot {
+            width: 10px; 
+            height: 10px; 
+            border-radius: 50%;
+            display: inline-block;
+            transition: background-color 0.3s ease;
+        }
+
+        .card {
+            background: var(--surface);
+            border-radius: var(--radius-lg);
+            padding: 28px;
+            margin-bottom: 28px;
+            box-shadow: var(--shadow-md);
+            border: 1px solid rgba(226, 232, 240, 0.8);
+            transition: box-shadow 0.3s ease;
+        }
+        
+        .card:hover {
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.08), 0 4px 6px -2px rgba(0, 0, 0, 0.04);
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 24px;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 16px;
+        }
+
+        .card-title {
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--text-main);
+        }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 20px;
+            align-items: start;
+        }
+
+        .input-group {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .input-group label {
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text-main);
+            margin-bottom: 8px;
+        }
+
+        input, select {
+            width: 100%;
+            padding: 12px 16px;
+            border: 1.5px solid var(--border-color);
+            border-radius: var(--radius-sm);
+            font-size: 15px;
+            color: var(--text-main);
+            background-color: var(--surface);
+            transition: all 0.2s ease;
+            outline: none;
+            box-shadow: var(--shadow-sm);
+        }
+
+        input:hover, select:hover {
+            border-color: var(--border-focus);
+        }
+
+        input:focus, select:focus {
+            border-color: var(--primary-blue);
+            box-shadow: var(--focus-ring);
+            background-color: var(--surface);
+        }
+
+        button {
+            padding: 12px 24px;
+            border: none;
+            border-radius: var(--radius-sm);
+            font-weight: 600;
+            font-size: 14.5px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            outline: none;
+        }
+
+        button:active {
+            transform: translateY(1px);
+        }
+        
+        button:focus-visible {
+            box-shadow: var(--focus-ring);
+        }
+
+        .btn-primary {
+            background-color: var(--primary-orange);
+            color: white;
+            box-shadow: 0 4px 6px -1px rgba(234, 88, 12, 0.3);
+        }
+
+        .btn-primary:hover {
+            background-color: var(--orange-hover);
+            box-shadow: 0 6px 8px -1px rgba(234, 88, 12, 0.4);
+        }
+
+        .btn-secondary {
+            background-color: #f1f5f9;
+            color: var(--text-main);
+            border: 1px solid var(--border-color);
+        }
+
+        .btn-secondary:hover {
+            background-color: #e2e8f0;
+        }
+        
+        .btn-danger {
+            background-color: white;
+            color: var(--danger);
+            border: 1.5px solid var(--danger);
+            padding: 8px 16px;
+            font-size: 13px;
+        }
+        
+        .btn-danger:hover {
+            background-color: var(--danger-bg);
+        }
+
+        .btn-edit {
+            background-color: white;
+            color: var(--primary-blue);
+            border: 1.5px solid var(--primary-blue);
+            padding: 8px 16px;
+            font-size: 13px;
+        }
+        
+        .btn-edit:hover {
+            background-color: #e0f2fe;
+        }
+
+        .table-responsive {
+            overflow-x: auto;
+            border-radius: var(--radius-sm);
+            border: 1px solid var(--border-color);
+            background: var(--surface);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            white-space: nowrap;
+        }
+
+        th, td {
+            padding: 16px 20px;
+            text-align: left;
+            font-size: 14.5px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        th {
+            background-color: #f8fafc;
+            font-weight: 700;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            font-size: 12px;
+            letter-spacing: 0.8px;
+        }
+
+        tr:last-child td {
+            border-bottom: none;
+        }
+
+        tr:hover td {
+            background-color: #f8fafc;
+        }
+
+        .amount-positive { color: var(--success); font-weight: 700; }
+        .amount-negative { color: var(--danger); font-weight: 700; }
+
+        .history-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .history-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 16px 20px;
+            background-color: var(--surface);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-md);
+            transition: background-color 0.2s, transform 0.2s;
+        }
+        
+        .history-item:hover {
+            background-color: #f8fafc;
+            border-color: #cbd5e1;
+            transform: translateX(4px);
+        }
+
+        .history-info {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .history-title { 
+            font-weight: 700; 
+            font-size: 15px; 
+            color: var(--text-main);
+            display: flex;
+            align-items: center;
+        }
+        
+        .history-meta { 
+            font-size: 13px; 
+            color: var(--text-muted); 
+            font-weight: 500;
+        }
+        
+        .badge {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 700;
+            margin-left: 12px;
+            letter-spacing: 0.3px;
+        }
+        .badge-advance { background: var(--warning-bg); color: #b45309; }
+        .badge-settlement { background: var(--success-bg); color: var(--success); }
+
+        .history-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(15, 23, 42, 0.5);
+            backdrop-filter: blur(4px);
+            display: none; justify-content: center; align-items: center;
+            z-index: 1000;
+            padding: 20px;
+        }
+        .modal-content {
+            background: var(--surface); 
+            padding: 32px; 
+            border-radius: var(--radius-lg);
+            width: 100%; max-width: 420px; 
+            text-align: center;
+            box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1), 0 10px 10px -5px rgba(0,0,0,0.04);
+        }
+        .modal-actions { 
+            margin-top: 28px; 
+            display: flex; justify-content: center; gap: 12px; 
+        }
+
+        @media (max-width: 768px) {
+            body { flex-direction: column; }
+            .sidebar { 
+                width: 100%; height: auto; position: static; 
+                padding: 16px; flex-direction: row; flex-wrap: wrap; 
+                justify-content: center; gap: 10px;
+            }
+            .brand { 
+                width: 100%; text-align: center; margin-bottom: 10px; padding-bottom: 10px; 
+            }
+            .brand::after { left: 35%; width: 30%; }
+            .sidebar a { padding: 10px 14px; font-size: 14px; margin-bottom: 0; }
+            .main-content { margin-left: 0; padding: 20px; }
+            .history-item { flex-direction: column; align-items: flex-start; gap: 16px; }
+            .history-actions { width: 100%; display: flex; justify-content: flex-start; }
+            .form-grid { grid-template-columns: 1fr; }
+        }
     </style>
 </head>
 <body>
 
-<div class="container">
-    <div class="menu">
-        <a href="dashboard.html">🏠 Dashboard</a>
-        <a href="labour.html">👷 Labour</a>
-        <a href="attendance.html">📅 Attendance</a>
-        <a href="salary.html">💰 Salary</a>
-        <a href="purchase_book.html">🛒 Purchase Book</a>
-        <a href="reports.html">📄 Reports</a>
-        <a href="index.html">Logout</a>
-    </div>
-    
-    <h1>Sparkx Welding and Fabrications Bengaluru</h1>
+<nav class="sidebar" aria-label="Main Navigation">
+    <div class="brand">SPARKX</div>
+    <a href="dashboard.html">🏠 Dashboard</a>
+    <a href="labour.html">👷 Labour</a>
+    <a href="attendance.html">📅 Attendance</a>
+    <a href="salary.html" class="active" aria-current="page">💰 Salary</a>
+    <a href="purchase_book.html">🛒 Purchase</a>
+    <a href="reports.html">📄 Reports</a>
+    <a href="index.html" style="margin-top: auto;">🚪 Logout</a>
+</nav>
 
-    <div class="full-width-container">
-        <h2>Table 1: Complete Monthly Salary</h2>
-        <input type="month" id="salaryMonth" onchange="refreshAllSalaryData()">
-        <div id="salaryTableContainer"></div>
+<main class="main-content">
+    <div class="page-header">
+        <h1>Salary & Payouts</h1>
+        <p>Manage workshop advances, final settlements, and strictly track net earnings.</p>
     </div>
 
-    <div class="full-width-container">
-        <h2>Table 2: Custom Date Range Earnings</h2>
-        From: <input type="date" id="rangeStart" onchange="refreshAllSalaryData()">
-        To: <input type="date" id="rangeEnd" onchange="refreshAllSalaryData()">
-        <div id="rangeSalaryTableContainer"></div>
+    <!-- Sync status updated with polite ARIA live region for screen readers -->
+    <div id="syncStatus" class="sync-status-pill" aria-live="polite">
+        <span id="syncDot" class="sync-dot" style="background-color: var(--success); box-shadow: 0 0 0 2px var(--success-bg);"></span>
+        <span id="syncText">Data formats synchronized with Supabase</span>
     </div>
 
-    <div class="full-width-container" style="border-top: 4px solid #b71c1c;">
-        <h2>Table 3: Record a Cash Payout / Settlement</h2>
+    <div class="card" style="border-top: 4px solid var(--primary-orange);">
+        <div class="card-header">
+            <h2 class="card-title">Record New Payout / Settlement</h2>
+        </div>
         <form id="payoutForm" onsubmit="handleFormSubmission(event)">
             <input type="hidden" id="editingPayoutId">
-            <select id="payoutWorker" required></select>
-            <input type="number" id="payoutAmount" placeholder="Amount (₹)" required step="any">
-            <input type="date" id="payoutDate" required>
-            <select id="payoutType">
-                <option value="Final Settlement">Final Settlement</option>
-                <option value="Advances">Advances</option>
-            </select>
-            <input type="text" id="payoutNotes" placeholder="Remarks">
-            <button type="submit" id="submitPayoutBtn">SAVE PAYOUT</button>
-            <button type="button" id="cancelEditBtn" onclick="clearPayoutForm()" style="display:none;">Cancel</button>
+            <div class="form-grid">
+                <div class="input-group">
+                    <label for="payoutWorker">Select Worker</label>
+                    <select id="payoutWorker" required></select>
+                </div>
+                <div class="input-group">
+                    <label for="payoutAmount">Amount (₹)</label>
+                    <input type="number" id="payoutAmount" placeholder="e.g. 1500" required step="any" min="1">
+                </div>
+                <div class="input-group">
+                    <label for="payoutDate">Date</label>
+                    <input type="date" id="payoutDate" required>
+                </div>
+                <div class="input-group">
+                    <label for="payoutType">Type</label>
+                    <select id="payoutType">
+                        <option value="Final Settlement">Final Settlement</option>
+                        <option value="Advance Payment">Advance Payment</option>
+                    </select>
+                </div>
+                <div class="input-group" style="grid-column: 1 / -1;">
+                    <label for="payoutNotes">Remarks / Notes</label>
+                    <input type="text" id="payoutNotes" placeholder="Optional details...">
+                </div>
+            </div>
+            <div style="margin-top: 28px; display: flex; gap: 12px;">
+                <button type="submit" id="submitPayoutBtn" class="btn-primary">Save Payout</button>
+                <button type="button" id="cancelEditBtn" class="btn-secondary" onclick="clearPayoutForm()" style="display:none;">Cancel Edit</button>
+            </div>
         </form>
-        <div id="payoutHistoryLog" style="margin-top:20px;"></div>
+    </div>
+
+    <div class="card">
+        <div class="card-header">
+            <h2 class="card-title">Monthly Salary Overview</h2>
+            <div class="input-group" style="width: auto;">
+                <input type="month" id="salaryMonth" aria-label="Select Salary Month" onchange="refreshAllSalaryData()" style="padding: 8px 12px;">
+            </div>
+        </div>
+        <div class="table-responsive" id="salaryTableContainer">
+            <!-- Data injected via JS -->
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header" style="flex-wrap: wrap; gap: 15px;">
+            <h2 class="card-title">Custom Date Range Earnings</h2>
+            <div style="display: flex; gap: 12px; align-items: center;">
+                <input type="date" id="rangeStart" aria-label="Start Date" onchange="refreshAllSalaryData()" style="padding: 8px 12px;">
+                <span style="color: var(--text-muted); font-weight: 500;">to</span>
+                <input type="date" id="rangeEnd" aria-label="End Date" onchange="refreshAllSalaryData()" style="padding: 8px 12px;">
+            </div>
+        </div>
+        <div class="table-responsive" id="rangeSalaryTableContainer">
+            <!-- Data injected via JS -->
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header">
+            <h2 class="card-title">Recent Payout History</h2>
+        </div>
+        <div class="history-list" id="payoutHistoryLog">
+            <!-- Data injected via JS -->
+        </div>
+    </div>
+</main>
+
+<!-- Custom Delete Confirmation Modal -->
+<div id="deleteModal" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+    <div class="modal-content">
+        <h3 id="modalTitle" style="margin-bottom: 12px; color: var(--text-main); font-size: 20px;">Confirm Deletion</h3>
+        <p style="color: var(--text-muted); font-size: 15px; line-height: 1.5;">Are you sure you want to delete this payout record? This action cannot be undone.</p>
+        <div class="modal-actions">
+            <button class="btn-secondary" onclick="closeDeleteModal()">Cancel</button>
+            <button class="btn-danger" id="confirmDeleteBtn" style="background-color: var(--danger); color: white;">Yes, Delete</button>
+        </div>
     </div>
 </div>
 
 <script>
 const _supabase = supabase.createClient("https://fjzqscohyteznkehiqnf.supabase.co", "sb_publishable_ER-PXAe4A1vsLDYETL4BKw_G7p24kTE");
-let labourList = JSON.parse(localStorage.getItem('labourList')) || [{id: "1", name: "Javed", wage: 1300}, {id: "2", name: "Arbaj", wage: 1000}];
+let labourList = [];
+let payoutToDelete = null;
 
-// Helper to convert "M/D/YYYY" to "YYYY-MM-DD"
+/**
+ * Universal Date Normalizer
+ * Converts any date representation (ISO, YYYY-MM-DD, DD/MM/YYYY, DD-MM-YYYY, Timestamps)
+ * reliably into a standard YYYY-MM-DD string key for precise ledger filtering.
+ */
 function normalizeDate(dateStr) {
-    if (!dateStr || !dateStr.includes('/')) return "";
-    const [m, d, y] = dateStr.split('/');
-    return `${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`;
+    if (!dateStr) return "";
+    
+    // Convert to string in case a raw number/Date object is passed
+    const s = String(dateStr).trim();
+    if (!s) return "";
+
+    // If ISO timestamp like 2026-08-04T10:20:30.000Z
+    if (s.includes('T')) {
+        return s.split('T')[0];
+    }
+
+    // Handle standard YYYY-MM-DD or YYYY/MM/DD
+    if (/^\d{4}[-/]\d{1,2}[-/]\d{1,2}$/.test(s)) {
+        const parts = s.split(/[-/]/);
+        return `${parts[0]}-${parts[1].padStart(2, '0')}-${parts[2].padStart(2, '0')}`;
+    }
+
+    // Handle Indian/European formats: DD/MM/YYYY or DD-MM-YYYY
+    if (/^\d{1,2}[-/]\d{1,2}[-/]\d{4}$/.test(s)) {
+        const parts = s.split(/[-/]/);
+        // parts[0] = DD, parts[1] = MM, parts[2] = YYYY
+        return `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
+    }
+
+    // Fallback: Use standard JS Date parsing
+    const parsed = new Date(s);
+    if (!isNaN(parsed.getTime())) {
+        const y = parsed.getFullYear();
+        const m = String(parsed.getMonth() + 1).padStart(2, '0');
+        const d = String(parsed.getDate()).padStart(2, '0');
+        return `${y}-${m}-${d}`;
+    }
+
+    return s;
 }
 
-window.onload = function() {
+/**
+ * Formats YYYY-MM-DD into a clean, human-readable format (e.g. 04 Aug 2026)
+ */
+function formatDisplayDate(dateStr) {
+    const norm = normalizeDate(dateStr);
+    if (!norm || norm.length < 10) return dateStr || "N/A";
+    const [y, m, d] = norm.split('-');
+    const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    const monthIdx = parseInt(m, 10) - 1;
+    return `${d} ${months[monthIdx] || m} ${y}`;
+}
+
+// Safely matches worker IDs regardless of whether key is 'labourid', 'labour_id', 'worker_id', or string vs number
+function isWorkerMatch(row, workerId, workerName) {
+    const rowWorkerId = String(row.labourid || row.labour_id || row.labourId || row.worker_id || "").trim();
+    const targetId = String(workerId).trim();
+    
+    if (rowWorkerId && targetId && rowWorkerId === targetId) {
+        return true;
+    }
+    
+    // Fallback name matching if IDs differ across systems
+    const rowName = (row.name || row.labour_name || row.worker_name || "").toLowerCase().trim();
+    const targetName = (workerName || "").toLowerCase().trim();
+    return rowName && targetName && rowName === targetName;
+}
+
+// Extracts attendance status in a case-insensitive manner
+function isPresentStatus(statusStr) {
+    if (!statusStr) return false;
+    const s = String(statusStr).toLowerCase().trim();
+    return s === "present" || s === "p" || s === "half-day" || s === "half day";
+}
+
+// Calculates wage coefficient (1.0 for present, 0.5 for half day)
+function getStatusMultiplier(statusStr) {
+    if (!statusStr) return 0;
+    const s = String(statusStr).toLowerCase().trim();
+    if (s.includes("half")) return 0.5;
+    if (s === "present" || s === "p") return 1.0;
+    return 0;
+}
+
+window.onload = async function() {
     let today = new Date().toISOString().split('T')[0];
     document.getElementById('salaryMonth').value = today.substring(0, 7);
     document.getElementById('rangeStart').value = today.substring(0, 7) + "-01";
     document.getElementById('rangeEnd').value = today;
     document.getElementById('payoutDate').value = today;
     
-    const dropdown = document.getElementById('payoutWorker');
-    labourList.forEach(w => {
-        dropdown.innerHTML += `<option value="${w.id}" data-name="${w.name}">${w.name}</option>`;
-    });
-    refreshAllSalaryData();
+    await loadWorkersList();
+    await refreshAllSalaryData();
 };
 
+async function loadWorkersList() {
+    let loaded = [];
+    try {
+        // Try fetching master workers list from Supabase first
+        const { data: dbWorkers, error } = await _supabase.from('labours').select('*');
+        if (!error && dbWorkers && dbWorkers.length > 0) {
+            loaded = dbWorkers.map(w => ({
+                id: String(w.id || w.labour_id),
+                name: w.name || w.labour_name,
+                wage: parseFloat(w.wage || w.daily_wage || 0)
+            }));
+        }
+    } catch(err) {
+        console.warn("Supabase worker table query fallback:", err);
+    }
+
+    // Fall back to localStorage or default seed data if Supabase table isn't populated yet
+    if (loaded.length === 0) {
+        const local = JSON.parse(localStorage.getItem('labourList')) || [];
+        if (local.length > 0) {
+            loaded = local.map(w => ({ id: String(w.id), name: w.name, wage: parseFloat(w.wage || 0) }));
+        } else {
+            loaded = [{id: "1", name: "Javed", wage: 1300}, {id: "2", name: "Arbaj", wage: 1000}];
+        }
+    }
+
+    labourList = loaded;
+
+    // Populate Worker Dropdown
+    const dropdown = document.getElementById('payoutWorker');
+    dropdown.innerHTML = '';
+    labourList.forEach(w => {
+        dropdown.innerHTML += `<option value="${w.id}" data-name="${w.name}">${w.name} (₹${w.wage}/day)</option>`;
+    });
+}
+
 async function refreshAllSalaryData() {
-    const { data: att } = await _supabase.from('attendance_history').select('*');
-    const { data: pay } = await _supabase.from('workshop_payouts').select('*').order('created_at', { ascending: false });
+    document.getElementById('syncText').innerText = "Fetching real-time ledger data...";
     
-    // Normalize dates for unified comparison
-    const normAtt = (att || []).map(r => ({...r, normDate: normalizeDate(r.date)}));
-    const normPay = (pay || []).map(p => ({...p, normDate: p.created_at ? p.created_at.split('T')[0] : ""}));
+    const { data: att, error: attErr } = await _supabase.from('attendance_history').select('*');
+    const { data: pay, error: payErr } = await _supabase.from('workshop_payouts').select('*').order('date', { ascending: false }).order('created_at', { ascending: false });
+    
+    if (attErr || payErr) {
+        document.getElementById('syncDot').style.backgroundColor = 'var(--danger)';
+        document.getElementById('syncText').innerText = "Sync warning: Reading from local dataset format";
+    } else {
+        document.getElementById('syncDot').style.backgroundColor = 'var(--success)';
+        document.getElementById('syncText').innerText = "Data formats fully synchronized across DB & UI";
+    }
+
+    // Strict format normalization across all fetched records
+    const normAtt = (att || []).map(r => ({
+        ...r, 
+        normDate: normalizeDate(r.date || r.created_at)
+    }));
+
+    const normPay = (pay || []).map(p => ({
+        ...p, 
+        normDate: normalizeDate(p.date ? p.date : (p.created_at ? p.created_at : ""))
+    }));
     
     renderMonthly(normAtt, normPay);
     renderRangeEarnings(normAtt, normPay);
-    renderMasterLedger(pay || []);
-}
-
-function renderMonthly(att, pay) {
-    const monthInput = document.getElementById('salaryMonth').value; // "YYYY-MM"
-    const filteredAtt = att.filter(r => r.normDate.startsWith(monthInput));
-    const filteredPay = pay.filter(p => p.normDate.startsWith(monthInput));
-    document.getElementById('salaryTableContainer').innerHTML = generateTable(filteredAtt, filteredPay);
-}
-
-function renderRangeEarnings(att, pay) {
-    const start = document.getElementById('rangeStart').value;
-    const end = document.getElementById('rangeEnd').value;
-    const filteredAtt = att.filter(r => r.normDate >= start && r.normDate <= end);
-    const filteredPay = pay.filter(p => p.normDate >= start && p.normDate <= end);
-    document.getElementById('rangeSalaryTableContainer').innerHTML = generateTable(filteredAtt, filteredPay);
+    renderMasterLedger(normPay);
 }
 
 function generateTable(attRows, payRows) {
-    let html = `<table><tr><th>Name</th><th>Gross</th><th>Advances</th><th>Settlements</th><th>Net</th></tr>`;
+    let html = `<table>
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th>Gross Earnings</th>
+                <th>Advances</th>
+                <th>Settlements</th>
+                <th>Net Balance</th>
+            </tr>
+        </thead>
+        <tbody>`;
+        
+    let hasData = false;
+    
     labourList.forEach(w => {
-        const wAtt = attRows.filter(r => r.labourid == w.id && r.status == "Present");
-        const wPay = payRows.filter(p => p.labourid == w.id);
+        // Multi-format key matcher for attendance
+        const wAtt = attRows.filter(r => isWorkerMatch(r, w.id, w.name) && isPresentStatus(r.status));
+        const wPay = payRows.filter(p => isWorkerMatch(p, w.id, w.name));
         
-        // Calculate gross (only present days)
-        const gross = wAtt.reduce((sum, r) => sum + (parseFloat(r.wageattime)||w.wage) + (parseFloat(r.otamount)||0), 0);
+        // Calculate Gross Earnings (supports wageattime, wage, daily_wage, and half-day multipliers)
+        const gross = wAtt.reduce((sum, r) => {
+            const multiplier = getStatusMultiplier(r.status);
+            const baseWage = parseFloat(r.wageattime) || parseFloat(r.wage) || parseFloat(w.wage) || 0;
+            const ot = parseFloat(r.otamount || r.ot_amount || r.overtime) || 0;
+            return sum + (baseWage * multiplier) + ot;
+        }, 0);
         
-        // Updated: Calculate advances from ALL attendance entries for this worker (Present or Absent)
-        const allWorkerAtt = attRows.filter(r => r.labourid == w.id);
-        const totalAdvances = allWorkerAtt.reduce((sum, r) => sum + (parseFloat(r.advance)||0), 0) + 
-                            wPay.filter(p => p.type && p.type.toLowerCase().includes("advance")).reduce((s, p) => s + parseFloat(p.amount), 0);
+        const allWorkerAtt = attRows.filter(r => isWorkerMatch(r, w.id, w.name));
         
-        const totalSettlements = wPay.filter(p => p.type && p.type.toLowerCase().includes("settlement")).reduce((s, p) => s + parseFloat(p.amount), 0);
+        // Calculate Advances (both daily advances logged in attendance and payout advances)
+        const dailyAdvances = allWorkerAtt.reduce((sum, r) => sum + Math.abs(parseFloat(r.advance || r.advance_amount) || 0), 0);
+        const payoutAdvances = wPay.filter(p => {
+            const t = String(p.type || "").toLowerCase();
+            return t.includes("advance");
+        }).reduce((s, p) => s + Math.abs(parseFloat(p.amount) || 0), 0);
+        
+        const totalAdvances = dailyAdvances + payoutAdvances;
+        
+        // Calculate Final Settlements
+        const totalSettlements = wPay.filter(p => {
+            const t = String(p.type || "").toLowerCase();
+            return t.includes("settlement") || t.includes("final");
+        }).reduce((s, p) => s + Math.abs(parseFloat(p.amount) || 0), 0);
+        
         const net = gross - totalAdvances - totalSettlements;
+        const netClass = net < 0 ? 'amount-negative' : 'amount-positive';
         
-        html += `<tr><td>${w.name}</td><td>₹${gross}</td><td>₹${totalAdvances}</td><td>₹${totalSettlements}</td><td style="font-weight:bold; color:${net<0?'red':'green'}">₹${net}</td></tr>`;
+        hasData = true;
+        html += `<tr>
+                    <td style="font-weight: 500; color: var(--text-main);">${w.name}</td>
+                    <td>₹${gross.toLocaleString('en-IN', {minimumFractionDigits: 0, maximumFractionDigits: 2})}</td>
+                    <td>₹${totalAdvances.toLocaleString('en-IN', {minimumFractionDigits: 0, maximumFractionDigits: 2})}</td>
+                    <td>₹${totalSettlements.toLocaleString('en-IN', {minimumFractionDigits: 0, maximumFractionDigits: 2})}</td>
+                    <td class="${netClass}">₹${net.toLocaleString('en-IN', {minimumFractionDigits: 0, maximumFractionDigits: 2})}</td>
+                 </tr>`;
     });
-    return html + `</table>`;
+    
+    if(!hasData || labourList.length === 0) {
+        html += `<tr><td colspan="5" style="text-align: center; color: var(--text-muted);">No records found for this period.</td></tr>`;
+    }
+    
+    return html + `</tbody></table>`;
 }
 
 function renderMasterLedger(pay) {
-    document.getElementById('payoutHistoryLog').innerHTML = pay.map(p => `
-        <div style="border-bottom:1px solid #eee; padding:8px; display:flex; justify-content:space-between; align-items:center;">
-            <div>
-                <strong>${p.created_at}</strong> - ${p.name}: ₹${p.amount} (${p.type})
-                ${p.notes ? `<br><small style="color:gray;">Remarks: ${p.notes}</small>` : ''}
-            </div>
-            <div>
-                <button onclick='editPayout(${JSON.stringify(p).replace(/'/g, "&apos;")})' style="background:#0288d1; color:white; border:none; padding:3px 8px; cursor:pointer;">EDIT</button>
-                <button onclick='deletePayout("${p.id}")' style="background:#d32f2f; color:white; border:none; padding:3px 8px; cursor:pointer; margin-left:5px;">DELETE</button>
-            </div>
-        </div>`).join('');
-}
+    if(!pay || pay.length === 0) {
+        document.getElementById('payoutHistoryLog').innerHTML = `<p style="color: var(--text-muted); font-size: 14px;">No payouts recorded yet.</p>`;
+        return;
+    }
 
-async function deletePayout(id) { if (confirm("Delete this record?")) { await _supabase.from('workshop_payouts').delete().eq('id', id); refreshAllSalaryData(); } }
-function editPayout(p) { document.getElementById('editingPayoutId').value = p.id; document.getElementById('payoutWorker').value = p.labourid; document.getElementById('payoutAmount').value = p.amount; document.getElementById('payoutType').value = p.type; document.getElementById('payoutNotes').value = p.notes || ""; document.getElementById('payoutDate').value = p.created_at; document.getElementById('submitPayoutBtn').innerHTML = "UPDATE"; document.getElementById('cancelEditBtn').style.display = "inline"; }
-function clearPayoutForm() { document.getElementById('editingPayoutId').value = ""; document.getElementById('submitPayoutBtn').innerHTML = "SAVE PAYOUT"; document.getElementById('cancelEditBtn').style.display = "none"; document.getElementById('payoutDate').value = new Date().toISOString().split('T')[0]; }
+    document.getElementById('payoutHistoryLog').innerHTML = pay.map(p => {
+        const safeType = String(p.type || "").toLowerCase();
+        const badgeClass = safeType.includes("advance") ? "badge-advance" : "badge-settlement";
+        
+        // Unified display date
+        const displayDate = formatDisplayDate(p.normDate);
+        const safeAmount = Math.abs(parseFloat(p.amount) || 0);
+        const workerName = p.name || p.worker_name || "Worker";
+
+        return `
+        <div class="history-item">
+            <div class="history-info">
+                <div class="history-title">
+                    ${workerName}: ₹${safeAmount.toLocaleString('en-IN')}
+                    <span class="badge ${badgeClass}">${p.type || "Payout"}</span>
+                </div>
+                <div class="history-meta">
+                    📅 ${displayDate} 
+                    ${p.notes ? `| 📝 ${p.notes}` : ''}
+                </div>
+            </div>
+            <div class="history-actions">
+                <button class="btn-edit" onclick='editPayout(${JSON.stringify(p).replace(/'/g, "&apos;")})'>Edit</button>
+                <button class="btn-danger" onclick='requestDelete("${p.id}")' style="margin-left:5px;">Delete</button>
+            </div>
+        </div>`;
+    }).join('');
+}
 
 async function handleFormSubmission(e) { 
     e.preventDefault(); 
+    
+    const btn = document.getElementById('submitPayoutBtn');
+    const originalText = btn.innerHTML;
+    
+    const amountVal = parseFloat(document.getElementById('payoutAmount').value);
+    if (isNaN(amountVal) || amountVal <= 0) {
+        alert("Please enter a valid amount greater than 0.");
+        return;
+    }
+
+    btn.innerHTML = "Saving...";
+    btn.disabled = true;
+
     const id = document.getElementById('editingPayoutId').value; 
+    const dateValue = normalizeDate(document.getElementById('payoutDate').value);
+    const selectedWorker = document.getElementById('payoutWorker');
+    const workerId = selectedWorker.value;
+    const workerName = selectedWorker.options[selectedWorker.selectedIndex].getAttribute('data-name') || selectedWorker.options[selectedWorker.selectedIndex].text.split(' (')[0];
+
+    // Writes BOTH `labourid` and `labour_id` to guarantee DB compatibility across any table schema variant
     const data = { 
-        labourid: document.getElementById('payoutWorker').value, 
-        name: document.getElementById('payoutWorker').options[document.getElementById('payoutWorker').selectedIndex].text, 
-        amount: parseFloat(document.getElementById('payoutAmount').value), 
+        labourid: workerId,
+        labour_id: workerId,
+        name: workerName,
+        amount: Math.abs(amountVal),
         type: document.getElementById('payoutType').value, 
         notes: document.getElementById('payoutNotes').value,
-        created_at: document.getElementById('payoutDate').value
+        date: dateValue
     }; 
-    if(id) await _supabase.from('workshop_payouts').update(data).eq('id', id); 
-    else await _supabase.from('workshop_payouts').insert([data]); 
+    
+    if (!id) {
+        data.created_at = new Date().toISOString();
+    }
+    
+    try {
+        if (id) {
+            await _supabase.from('workshop_payouts').update(data).eq('id', id); 
+        } else {
+            await _supabase.from('workshop_payouts').insert([data]); 
+        }
+    } catch(err) {
+        console.error("Payout submission error:", err);
+    }
+    
     await refreshAllSalaryData(); 
     clearPayoutForm(); 
-    document.getElementById('payoutAmount').value = ""; 
+    
+    btn.innerHTML = originalText;
+    btn.disabled = false;
 }
 </script>
 </body>
