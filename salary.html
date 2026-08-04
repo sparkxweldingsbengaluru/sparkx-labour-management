@@ -1,424 +1,72 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sparkx | Salary & Payouts</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <title>Sparkx Salary Management</title>
+    <link rel="stylesheet" href="style.css">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    
     <style>
-        :root {
-            --primary-blue: #1e3a8a; 
-            --primary-orange: #ea580c; 
-            --bg-color: #f1f5f9;
-            --surface: #ffffff;
-            --text-main: #0f172a;
-            --text-muted: #64748b;
-            --border-color: #e2e8f0;
-            --success: #16a34a;
-            --danger: #dc2626;
-            --radius: 10px;
-        }
-
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-            font-family: 'Inter', sans-serif;
-        }
-
-        body {
-            background-color: var(--bg-color);
-            color: var(--text-main);
-            display: flex;
-            min-height: 100vh;
-        }
-
-        .sidebar {
-            width: 250px;
-            background-color: var(--primary-blue);
-            color: white;
-            display: flex;
-            flex-direction: column;
-            padding: 20px 0;
-            position: fixed;
-            height: 100vh;
-            z-index: 100;
-        }
-
-        .brand {
-            font-size: 20px;
-            font-weight: 700;
-            text-align: center;
-            padding-bottom: 20px;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-            margin-bottom: 20px;
-            color: var(--primary-orange);
-            letter-spacing: 1px;
-        }
-
-        .sidebar a {
-            color: #cbd5e1;
-            text-decoration: none;
-            padding: 12px 24px;
-            font-weight: 500;
-            display: block;
-            transition: all 0.2s;
-        }
-
-        .sidebar a:hover, .sidebar a.active {
-            background-color: rgba(255, 255, 255, 0.1);
-            color: white;
-            border-left: 4px solid var(--primary-orange);
-        }
-
-        .main-content {
-            flex: 1;
-            margin-left: 250px;
-            padding: 30px;
-            max-width: 1200px;
-        }
-
-        .page-header {
-            margin-bottom: 30px;
-        }
-
-        .page-header h1 {
-            font-size: 28px;
-            font-weight: 700;
-            color: var(--text-main);
-        }
-
-        .page-header p {
-            color: var(--text-muted);
-            margin-top: 5px;
-        }
-
-        .card {
-            background: var(--surface);
-            border-radius: var(--radius);
-            padding: 24px;
-            margin-bottom: 24px;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
-            border: 1px solid var(--border-color);
-        }
-
-        .card-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 20px;
-            border-bottom: 1px solid var(--border-color);
-            padding-bottom: 15px;
-        }
-
-        .card-title {
-            font-size: 18px;
-            font-weight: 600;
-            color: var(--text-main);
-        }
-
-        .form-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 15px;
-            align-items: end;
-        }
-
-        .input-group {
-            display: flex;
-            flex-direction: column;
-        }
-
-        .input-group label {
-            font-size: 13px;
-            font-weight: 600;
-            color: var(--text-muted);
-            margin-bottom: 5px;
-        }
-
-        input, select {
-            width: 100%;
-            padding: 10px 12px;
-            border: 1px solid var(--border-color);
-            border-radius: 6px;
-            font-size: 14px;
-            transition: border-color 0.2s;
-            outline: none;
-            background-color: #f8fafc;
-        }
-
-        input:focus, select:focus {
-            border-color: var(--primary-blue);
-            background-color: #fff;
-        }
-
-        button {
-            padding: 10px 16px;
-            border: none;
-            border-radius: 6px;
-            font-weight: 600;
-            font-size: 14px;
-            cursor: pointer;
-            transition: background-color 0.2s, transform 0.1s;
-        }
-
-        button:active {
-            transform: scale(0.98);
-        }
-
-        .btn-primary {
-            background-color: var(--primary-orange);
-            color: white;
-        }
-
-        .btn-primary:hover {
-            background-color: #c2410c;
-        }
-
-        .btn-secondary {
-            background-color: #e2e8f0;
-            color: var(--text-main);
-        }
-
-        .btn-secondary:hover {
-            background-color: #cbd5e1;
-        }
-        
-        .btn-danger {
-            background-color: var(--danger);
-            color: white;
-            padding: 6px 12px;
-            font-size: 12px;
-        }
-
-        .btn-edit {
-            background-color: var(--primary-blue);
-            color: white;
-            padding: 6px 12px;
-            font-size: 12px;
-        }
-
-        .table-responsive {
-            overflow-x: auto;
-            border-radius: 8px;
-            border: 1px solid var(--border-color);
-        }
-
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            white-space: nowrap;
-        }
-
-        th, td {
-            padding: 14px 16px;
-            text-align: left;
-            font-size: 14px;
-            border-bottom: 1px solid var(--border-color);
-        }
-
-        th {
-            background-color: #f8fafc;
-            font-weight: 600;
-            color: var(--text-muted);
-            text-transform: uppercase;
-            font-size: 12px;
-            letter-spacing: 0.5px;
-        }
-
-        tr:last-child td {
-            border-bottom: none;
-        }
-
-        tr:hover td {
-            background-color: #f8fafc;
-        }
-
-        .amount-positive { color: var(--success); font-weight: 700; }
-        .amount-negative { color: var(--danger); font-weight: 700; }
-
-        .history-list {
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-        }
-
-        .history-item {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 12px 16px;
-            background-color: #f8fafc;
-            border: 1px solid var(--border-color);
-            border-radius: 6px;
-        }
-
-        .history-info {
-            display: flex;
-            flex-direction: column;
-        }
-
-        .history-title { font-weight: 600; font-size: 14px; }
-        .history-meta { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
-        .badge {
-            display: inline-block;
-            padding: 2px 8px;
-            border-radius: 12px;
-            font-size: 11px;
-            font-weight: 600;
-            margin-left: 8px;
-        }
-        .badge-advance { background: #fef3c7; color: #b45309; }
-        .badge-settlement { background: #dcfce7; color: #166534; }
-
-        /* Custom Confirm Modal */
-        .modal-overlay {
-            position: fixed; top: 0; left: 0; right: 0; bottom: 0;
-            background: rgba(0,0,0,0.5);
-            display: none; justify-content: center; align-items: center;
-            z-index: 1000;
-        }
-        .modal-content {
-            background: white; padding: 24px; border-radius: var(--radius);
-            width: 100%; max-width: 400px; text-align: center;
-            box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1);
-        }
-        .modal-actions { margin-top: 20px; display: flex; justify-content: center; gap: 10px; }
-
-        /* Mobile Adjustments */
-        @media (max-width: 768px) {
-            body { flex-direction: column; }
-            .sidebar { width: 100%; height: auto; position: static; padding: 10px; flex-direction: row; flex-wrap: wrap; justify-content: space-between; }
-            .brand { border-bottom: none; margin-bottom: 0; padding-bottom: 0; width: 100%; text-align: left; padding: 10px; }
-            .sidebar a { padding: 8px 12px; font-size: 14px; border-left: none; border-bottom: 2px solid transparent; }
-            .sidebar a.active { border-left: none; border-bottom: 2px solid var(--primary-orange); }
-            .main-content { margin-left: 0; padding: 15px; }
-            .history-item { flex-direction: column; align-items: flex-start; gap: 10px; }
-            .history-actions { width: 100%; display: flex; justify-content: flex-end; }
-        }
+        .full-width-container { width: 100%; margin-bottom: 30px; padding: 20px; border: 1px solid #ddd; border-radius: 8px; background: #fff; }
+        table { width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 14px; }
+        th, td { padding: 12px; border: 1px solid #ddd; text-align: left; }
+        th { background-color: #333; color: white; }
     </style>
 </head>
 <body>
 
-<nav class="sidebar">
-    <div class="brand">SPARKX</div>
-    <a href="dashboard.html">🏠 Dashboard</a>
-    <a href="labour.html">👷 Labour</a>
-    <a href="attendance.html">📅 Attendance</a>
-    <a href="salary.html" class="active">💰 Salary</a>
-    <a href="purchase_book.html">🛒 Purchase</a>
-    <a href="reports.html">📄 Reports</a>
-    <a href="index.html" style="margin-top: auto;">🚪 Logout</a>
-</nav>
+<div class="container">
+    <div class="menu">
+        <a href="dashboard.html">🏠 Dashboard</a>
+        <a href="labour.html">👷 Labour</a>
+        <a href="attendance.html">📅 Attendance</a>
+        <a href="salary.html">💰 Salary</a>
+        <a href="purchase_book.html">🛒 Purchase Book</a>
+        <a href="reports.html">📄 Reports</a>
+        <a href="index.html">Logout</a>
+    </div>
+    
+    <h1>Sparkx Welding and Fabrications Bengaluru</h1>
 
-<main class="main-content">
-    <div class="page-header">
-        <h1>Salary & Payouts</h1>
-        <p>Manage workshop advances, final settlements, and view strict net earnings.</p>
+    <div class="full-width-container">
+        <h2>Table 1: Complete Monthly Salary</h2>
+        <input type="month" id="salaryMonth" onchange="refreshAllSalaryData()">
+        <div id="salaryTableContainer"></div>
     </div>
 
-    <div class="card" style="border-top: 4px solid var(--primary-orange);">
-        <div class="card-header">
-            <h2 class="card-title">Record New Payout / Settlement</h2>
-        </div>
+    <div class="full-width-container">
+        <h2>Table 2: Custom Date Range Earnings</h2>
+        From: <input type="date" id="rangeStart" onchange="refreshAllSalaryData()">
+        To: <input type="date" id="rangeEnd" onchange="refreshAllSalaryData()">
+        <div id="rangeSalaryTableContainer"></div>
+    </div>
+
+    <div class="full-width-container" style="border-top: 4px solid #b71c1c;">
+        <h2>Table 3: Record a Cash Payout / Settlement</h2>
         <form id="payoutForm" onsubmit="handleFormSubmission(event)">
             <input type="hidden" id="editingPayoutId">
-            <div class="form-grid">
-                <div class="input-group">
-                    <label>Select Worker</label>
-                    <select id="payoutWorker" required></select>
-                </div>
-                <div class="input-group">
-                    <label>Amount (₹)</label>
-                    <input type="number" id="payoutAmount" placeholder="e.g. 1500" required step="any" min="1">
-                </div>
-                <div class="input-group">
-                    <label>Date</label>
-                    <input type="date" id="payoutDate" required>
-                </div>
-                <div class="input-group">
-                    <label>Type</label>
-                    <select id="payoutType">
-                        <option value="Final Settlement">Final Settlement</option>
-                        <option value="Advance Payment">Advance Payment</option>
-                    </select>
-                </div>
-                <div class="input-group" style="grid-column: 1 / -1;">
-                    <label>Remarks / Notes</label>
-                    <input type="text" id="payoutNotes" placeholder="Optional details...">
-                </div>
-            </div>
-            <div style="margin-top: 20px; display: flex; gap: 10px;">
-                <button type="submit" id="submitPayoutBtn" class="btn-primary">Save Payout</button>
-                <button type="button" id="cancelEditBtn" class="btn-secondary" onclick="clearPayoutForm()" style="display:none;">Cancel Edit</button>
-            </div>
+            <select id="payoutWorker" required></select>
+            <input type="number" id="payoutAmount" placeholder="Amount (₹)" required step="any">
+            <input type="date" id="payoutDate" required>
+            <select id="payoutType">
+                <option value="Final Settlement">Final Settlement</option>
+                <option value="Advances">Advances</option>
+            </select>
+            <input type="text" id="payoutNotes" placeholder="Remarks">
+            <button type="submit" id="submitPayoutBtn">SAVE PAYOUT</button>
+            <button type="button" id="cancelEditBtn" onclick="clearPayoutForm()" style="display:none;">Cancel</button>
         </form>
-    </div>
-
-    <div class="card">
-        <div class="card-header">
-            <h2 class="card-title">Monthly Salary Overview</h2>
-            <div class="input-group" style="width: auto;">
-                <input type="month" id="salaryMonth" onchange="refreshAllSalaryData()" style="padding: 6px 10px;">
-            </div>
-        </div>
-        <div class="table-responsive" id="salaryTableContainer">
-            <!-- Data injected via JS -->
-        </div>
-    </div>
-
-    <div class="card">
-        <div class="card-header" style="flex-wrap: wrap; gap: 15px;">
-            <h2 class="card-title">Custom Date Range Earnings</h2>
-            <div style="display: flex; gap: 10px; align-items: center;">
-                <input type="date" id="rangeStart" onchange="refreshAllSalaryData()" style="padding: 6px 10px;">
-                <span style="color: var(--text-muted); font-weight: 500;">to</span>
-                <input type="date" id="rangeEnd" onchange="refreshAllSalaryData()" style="padding: 6px 10px;">
-            </div>
-        </div>
-        <div class="table-responsive" id="rangeSalaryTableContainer">
-            <!-- Data injected via JS -->
-        </div>
-    </div>
-
-    <div class="card">
-        <div class="card-header">
-            <h2 class="card-title">Recent Payout History</h2>
-        </div>
-        <div class="history-list" id="payoutHistoryLog">
-            <!-- Data injected via JS -->
-        </div>
-    </div>
-</main>
-
-<!-- Custom Delete Confirmation Modal -->
-<div id="deleteModal" class="modal-overlay">
-    <div class="modal-content">
-        <h3 style="margin-bottom: 10px; color: var(--text-main);">Confirm Deletion</h3>
-        <p style="color: var(--text-muted); font-size: 14px;">Are you sure you want to delete this payout record? This action cannot be undone.</p>
-        <div class="modal-actions">
-            <button class="btn-secondary" onclick="closeDeleteModal()">Cancel</button>
-            <button class="btn-danger" id="confirmDeleteBtn">Yes, Delete</button>
-        </div>
+        <div id="payoutHistoryLog" style="margin-top:20px;"></div>
     </div>
 </div>
 
 <script>
 const _supabase = supabase.createClient("https://fjzqscohyteznkehiqnf.supabase.co", "sb_publishable_ER-PXAe4A1vsLDYETL4BKw_G7p24kTE");
 let labourList = JSON.parse(localStorage.getItem('labourList')) || [{id: "1", name: "Javed", wage: 1300}, {id: "2", name: "Arbaj", wage: 1000}];
-let payoutToDelete = null;
 
-// Ensure robust date handling, accommodating both standard DB formats and ISO timestamps.
+// Helper to convert "M/D/YYYY" to "YYYY-MM-DD"
 function normalizeDate(dateStr) {
-    if (!dateStr) return "";
-    if (dateStr.includes('-')) return dateStr.split('T')[0]; // Safely extracts YYYY-MM-DD from ISO strings
-    if (dateStr.includes('/')) {
-        const [m, d, y] = dateStr.split('/');
-        return `${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`;
-    }
-    return dateStr;
+    if (!dateStr || !dateStr.includes('/')) return "";
+    const [m, d, y] = dateStr.split('/');
+    return `${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`;
 }
 
 window.onload = function() {
@@ -437,23 +85,19 @@ window.onload = function() {
 
 async function refreshAllSalaryData() {
     const { data: att } = await _supabase.from('attendance_history').select('*');
-    const { data: pay } = await _supabase.from('workshop_payouts').select('*').order('date', { ascending: false }).order('created_at', { ascending: false });
+    const { data: pay } = await _supabase.from('workshop_payouts').select('*').order('created_at', { ascending: false });
     
-    // Strict date normalization for ledger math
+    // Normalize dates for unified comparison
     const normAtt = (att || []).map(r => ({...r, normDate: normalizeDate(r.date)}));
-    const normPay = (pay || []).map(p => ({
-        ...p, 
-        // Prioritize explicit date field over system created_at timestamp
-        normDate: p.date ? p.date : (p.created_at ? p.created_at.split('T')[0] : "")
-    }));
+    const normPay = (pay || []).map(p => ({...p, normDate: p.created_at ? p.created_at.split('T')[0] : ""}));
     
     renderMonthly(normAtt, normPay);
     renderRangeEarnings(normAtt, normPay);
-    renderMasterLedger(normPay);
+    renderMasterLedger(pay || []);
 }
 
 function renderMonthly(att, pay) {
-    const monthInput = document.getElementById('salaryMonth').value; 
+    const monthInput = document.getElementById('salaryMonth').value; // "YYYY-MM"
     const filteredAtt = att.filter(r => r.normDate.startsWith(monthInput));
     const filteredPay = pay.filter(p => p.normDate.startsWith(monthInput));
     document.getElementById('salaryTableContainer').innerHTML = generateTable(filteredAtt, filteredPay);
@@ -468,180 +112,61 @@ function renderRangeEarnings(att, pay) {
 }
 
 function generateTable(attRows, payRows) {
-    let html = `<table>
-        <thead>
-            <tr>
-                <th>Name</th>
-                <th>Gross Earnings</th>
-                <th>Advances</th>
-                <th>Settlements</th>
-                <th>Net Balance</th>
-            </tr>
-        </thead>
-        <tbody>`;
-        
-    let hasData = false;
-    
+    let html = `<table><tr><th>Name</th><th>Gross</th><th>Advances</th><th>Settlements</th><th>Net</th></tr>`;
     labourList.forEach(w => {
         const wAtt = attRows.filter(r => r.labourid == w.id && r.status == "Present");
         const wPay = payRows.filter(p => p.labourid == w.id);
         
-        // Strict Type Safety: Enforce float and handle NaN to prevent ledger crashes
-        const gross = wAtt.reduce((sum, r) => sum + (parseFloat(r.wageattime) || parseFloat(w.wage) || 0) + (parseFloat(r.otamount) || 0), 0);
+        // Calculate gross (only present days)
+        const gross = wAtt.reduce((sum, r) => sum + (parseFloat(r.wageattime)||w.wage) + (parseFloat(r.otamount)||0), 0);
         
+        // Updated: Calculate advances from ALL attendance entries for this worker (Present or Absent)
         const allWorkerAtt = attRows.filter(r => r.labourid == w.id);
+        const totalAdvances = allWorkerAtt.reduce((sum, r) => sum + (parseFloat(r.advance)||0), 0) + 
+                            wPay.filter(p => p.type && p.type.toLowerCase().includes("advance")).reduce((s, p) => s + parseFloat(p.amount), 0);
         
-        // Use Math.abs to protect against double negatives in the ledger 
-        const dailyAdvances = allWorkerAtt.reduce((sum, r) => sum + Math.abs(parseFloat(r.advance) || 0), 0);
-        const payoutAdvances = wPay.filter(p => p.type && p.type.toLowerCase().includes("advance")).reduce((s, p) => s + Math.abs(parseFloat(p.amount) || 0), 0);
-        const totalAdvances = dailyAdvances + payoutAdvances;
-        
-        const totalSettlements = wPay.filter(p => p.type && (p.type.toLowerCase().includes("settlement") || p.type.toLowerCase().includes("final"))).reduce((s, p) => s + Math.abs(parseFloat(p.amount) || 0), 0);
-        
+        const totalSettlements = wPay.filter(p => p.type && p.type.toLowerCase().includes("settlement")).reduce((s, p) => s + parseFloat(p.amount), 0);
         const net = gross - totalAdvances - totalSettlements;
-        const netClass = net < 0 ? 'amount-negative' : 'amount-positive';
         
-        hasData = true;
-        html += `<tr>
-                    <td style="font-weight: 500; color: var(--text-main);">${w.name}</td>
-                    <td>₹${gross.toLocaleString('en-IN', {minimumFractionDigits: 0, maximumFractionDigits: 2})}</td>
-                    <td>₹${totalAdvances.toLocaleString('en-IN', {minimumFractionDigits: 0, maximumFractionDigits: 2})}</td>
-                    <td>₹${totalSettlements.toLocaleString('en-IN', {minimumFractionDigits: 0, maximumFractionDigits: 2})}</td>
-                    <td class="${netClass}">₹${net.toLocaleString('en-IN', {minimumFractionDigits: 0, maximumFractionDigits: 2})}</td>
-                 </tr>`;
+        html += `<tr><td>${w.name}</td><td>₹${gross}</td><td>₹${totalAdvances}</td><td>₹${totalSettlements}</td><td style="font-weight:bold; color:${net<0?'red':'green'}">₹${net}</td></tr>`;
     });
-    
-    if(!hasData) {
-        html += `<tr><td colspan="5" style="text-align: center; color: var(--text-muted);">No records found for this period.</td></tr>`;
-    }
-    
-    return html + `</tbody></table>`;
+    return html + `</table>`;
 }
 
 function renderMasterLedger(pay) {
-    if(!pay || pay.length === 0) {
-        document.getElementById('payoutHistoryLog').innerHTML = `<p style="color: var(--text-muted); font-size: 14px;">No payouts recorded yet.</p>`;
-        return;
-    }
-
-    document.getElementById('payoutHistoryLog').innerHTML = pay.map(p => {
-        // Safe string casting before .toLowerCase() execution
-        const safeType = (p.type || "").toLowerCase();
-        const badgeClass = safeType.includes("advance") ? "badge-advance" : "badge-settlement";
-        const displayDate = p.normDate || "No Date";
-        const safeAmount = Math.abs(parseFloat(p.amount) || 0);
-
-        return `
-        <div class="history-item">
-            <div class="history-info">
-                <div class="history-title">
-                    ${p.name}: ₹${safeAmount.toLocaleString('en-IN')}
-                    <span class="badge ${badgeClass}">${p.type || "Payout"}</span>
-                </div>
-                <div class="history-meta">
-                    📅 ${displayDate} 
-                    ${p.notes ? `| 📝 ${p.notes}` : ''}
-                </div>
+    document.getElementById('payoutHistoryLog').innerHTML = pay.map(p => `
+        <div style="border-bottom:1px solid #eee; padding:8px; display:flex; justify-content:space-between; align-items:center;">
+            <div>
+                <strong>${p.created_at}</strong> - ${p.name}: ₹${p.amount} (${p.type})
+                ${p.notes ? `<br><small style="color:gray;">Remarks: ${p.notes}</small>` : ''}
             </div>
-            <div class="history-actions">
-                <button class="btn-edit" onclick='editPayout(${JSON.stringify(p).replace(/'/g, "&apos;")})'>Edit</button>
-                <button class="btn-danger" onclick='requestDelete("${p.id}")' style="margin-left:5px;">Delete</button>
+            <div>
+                <button onclick='editPayout(${JSON.stringify(p).replace(/'/g, "&apos;")})' style="background:#0288d1; color:white; border:none; padding:3px 8px; cursor:pointer;">EDIT</button>
+                <button onclick='deletePayout("${p.id}")' style="background:#d32f2f; color:white; border:none; padding:3px 8px; cursor:pointer; margin-left:5px;">DELETE</button>
             </div>
-        </div>`;
-    }).join('');
+        </div>`).join('');
 }
 
-function requestDelete(id) {
-    payoutToDelete = id;
-    document.getElementById('deleteModal').style.display = 'flex';
-}
-
-function closeDeleteModal() {
-    payoutToDelete = null;
-    document.getElementById('deleteModal').style.display = 'none';
-}
-
-document.getElementById('confirmDeleteBtn').addEventListener('click', async function() {
-    if (payoutToDelete) {
-        document.getElementById('confirmDeleteBtn').innerText = 'Deleting...';
-        await _supabase.from('workshop_payouts').delete().eq('id', payoutToDelete); 
-        await refreshAllSalaryData();
-        document.getElementById('confirmDeleteBtn').innerText = 'Yes, Delete';
-        closeDeleteModal();
-    }
-});
-
-function editPayout(p) { 
-    document.getElementById('editingPayoutId').value = p.id; 
-    document.getElementById('payoutWorker').value = p.labourid; 
-    document.getElementById('payoutAmount').value = Math.abs(parseFloat(p.amount) || 0); 
-    document.getElementById('payoutType').value = p.type; 
-    document.getElementById('payoutNotes').value = p.notes || ""; 
-    
-    // Strict Date Handling: Ensure it binds properly to the HTML5 <input type="date"> which requires YYYY-MM-DD
-    document.getElementById('payoutDate').value = p.normDate || ""; 
-    
-    document.getElementById('submitPayoutBtn').innerHTML = "Update Payout"; 
-    document.getElementById('cancelEditBtn').style.display = "inline"; 
-    
-    document.getElementById('payoutForm').scrollIntoView({ behavior: 'smooth', block: 'center' });
-}
-
-function clearPayoutForm() { 
-    document.getElementById('editingPayoutId').value = ""; 
-    document.getElementById('payoutWorker').selectedIndex = 0;
-    document.getElementById('payoutAmount').value = ""; 
-    document.getElementById('payoutNotes').value = ""; 
-    document.getElementById('submitPayoutBtn').innerHTML = "Save Payout"; 
-    document.getElementById('cancelEditBtn').style.display = "none"; 
-    document.getElementById('payoutDate').value = new Date().toISOString().split('T')[0]; 
-}
+async function deletePayout(id) { if (confirm("Delete this record?")) { await _supabase.from('workshop_payouts').delete().eq('id', id); refreshAllSalaryData(); } }
+function editPayout(p) { document.getElementById('editingPayoutId').value = p.id; document.getElementById('payoutWorker').value = p.labourid; document.getElementById('payoutAmount').value = p.amount; document.getElementById('payoutType').value = p.type; document.getElementById('payoutNotes').value = p.notes || ""; document.getElementById('payoutDate').value = p.created_at; document.getElementById('submitPayoutBtn').innerHTML = "UPDATE"; document.getElementById('cancelEditBtn').style.display = "inline"; }
+function clearPayoutForm() { document.getElementById('editingPayoutId').value = ""; document.getElementById('submitPayoutBtn').innerHTML = "SAVE PAYOUT"; document.getElementById('cancelEditBtn').style.display = "none"; document.getElementById('payoutDate').value = new Date().toISOString().split('T')[0]; }
 
 async function handleFormSubmission(e) { 
     e.preventDefault(); 
-    
-    const btn = document.getElementById('submitPayoutBtn');
-    const originalText = btn.innerHTML;
-    
-    // Safety check for absolute amounts
-    const amountVal = parseFloat(document.getElementById('payoutAmount').value);
-    if (isNaN(amountVal) || amountVal <= 0) {
-        alert("Please enter a valid amount greater than 0.");
-        return;
-    }
-
-    btn.innerHTML = "Saving...";
-    btn.disabled = true;
-
     const id = document.getElementById('editingPayoutId').value; 
-    const dateValue = document.getElementById('payoutDate').value;
-    const isoDate = new Date().toISOString();
-
     const data = { 
         labourid: document.getElementById('payoutWorker').value, 
         name: document.getElementById('payoutWorker').options[document.getElementById('payoutWorker').selectedIndex].text, 
-        amount: Math.abs(amountVal), // Final ledger protection
+        amount: parseFloat(document.getElementById('payoutAmount').value), 
         type: document.getElementById('payoutType').value, 
         notes: document.getElementById('payoutNotes').value,
-        date: dateValue
+        created_at: document.getElementById('payoutDate').value
     }; 
-    
-    // Only set created_at on fresh inserts to maintain original DB history
-    if (!id) {
-        data.created_at = isoDate;
-    }
-    
-    if (id) {
-        await _supabase.from('workshop_payouts').update(data).eq('id', id); 
-    } else {
-        await _supabase.from('workshop_payouts').insert([data]); 
-    }
-    
+    if(id) await _supabase.from('workshop_payouts').update(data).eq('id', id); 
+    else await _supabase.from('workshop_payouts').insert([data]); 
     await refreshAllSalaryData(); 
     clearPayoutForm(); 
-    
-    btn.innerHTML = originalText;
-    btn.disabled = false;
+    document.getElementById('payoutAmount').value = ""; 
 }
 </script>
 </body>
