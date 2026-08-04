@@ -341,7 +341,7 @@
                 <div class="input-group">
                     <label>Type</label>
                     <select id="payoutType">
-                        <option value="Final Payment">Final Payment</option>
+                        <option value="Final Settlement">Final Settlement</option>
                         <option value="Advance Payment">Advance Payment</option>
                     </select>
                 </div>
@@ -587,13 +587,17 @@ async function handleFormSubmission(e) {
     btn.disabled = true;
 
     const id = document.getElementById('editingPayoutId').value; 
+    const dateValue = document.getElementById('payoutDate').value;
+    const isoDate = dateValue ? new Date(dateValue).toISOString() : new Date().toISOString();
+
     const data = { 
         labourid: document.getElementById('payoutWorker').value, 
         name: document.getElementById('payoutWorker').options[document.getElementById('payoutWorker').selectedIndex].text, 
         amount: parseFloat(document.getElementById('payoutAmount').value), 
         type: document.getElementById('payoutType').value, 
         notes: document.getElementById('payoutNotes').value,
-        created_at: document.getElementById('payoutDate').value
+        date: dateValue,
+        created_at: isoDate
     }; 
     
     if(id) {
