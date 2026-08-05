@@ -1,708 +1,245 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sparkx | Attendance Entry</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <title>Sparkx Attendance</title>
+    <link rel="stylesheet" href="style.css">
     <!-- Links your app to the free global Supabase engine -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    
-    <style>
-        :root {
-            /* Accessible Brand Colors */
-            --primary-blue: #0284c7; 
-            --primary-hover: #0369a1;
-            --primary-orange: #ea580c; 
-            --orange-hover: #c2410c;
-            
-            /* Backgrounds & Surfaces */
-            --bg-color: #f4f7f9;
-            --surface: #ffffff;
-            --sidebar-bg: #0f172a;
-            --sidebar-hover: #1e293b;
-            
-            /* Typography */
-            --text-main: #0f172a;
-            --text-body: #334155;
-            --text-muted: #64748b;
-            
-            /* UI Elements */
-            --border-color: #e2e8f0;
-            --border-focus: #94a3b8;
-            --radius-sm: 8px;
-            --radius-md: 12px;
-            --radius-lg: 16px;
-            
-            /* Status Colors */
-            --success: #15803d;
-            --success-bg: #dcfce7;
-            --danger: #b91c1c;
-            --danger-bg: #fee2e2;
-            --warning: #b45309;
-            --warning-bg: #fef3c7;
-            
-            /* Elevation */
-            --shadow-sm: 0 1px 3px rgba(0,0,0,0.05);
-            --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.08);
-            --focus-ring: 0 0 0 3px rgba(2, 132, 199, 0.3);
-        }
-
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-            -webkit-font-smoothing: antialiased;
-        }
-
-        body {
-            background-color: var(--bg-color);
-            color: var(--text-body);
-            display: flex;
-            min-height: 100vh;
-            line-height: 1.5;
-        }
-
-        /* Sidebar Navigation */
-        .sidebar {
-            width: 260px;
-            background-color: var(--sidebar-bg);
-            color: white;
-            display: flex;
-            flex-direction: column;
-            padding: 24px 16px;
-            position: fixed;
-            height: 100vh;
-            z-index: 100;
-            box-shadow: 4px 0 15px rgba(0,0,0,0.05);
-        }
-
-        .brand {
-            font-size: 22px;
-            font-weight: 800;
-            text-align: center;
-            padding-bottom: 24px;
-            margin-bottom: 20px;
-            color: var(--surface);
-            letter-spacing: 1.5px;
-            position: relative;
-        }
-        
-        .brand::after {
-            content: '';
-            position: absolute;
-            bottom: 0;
-            left: 20%;
-            width: 60%;
-            height: 2px;
-            background: linear-gradient(90deg, transparent, var(--primary-orange), transparent);
-        }
-
-        .sidebar a {
-            color: #94a3b8;
-            text-decoration: none;
-            padding: 12px 16px;
-            border-radius: var(--radius-sm);
-            font-weight: 500;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            margin-bottom: 6px;
-            transition: all 0.2s ease;
-            outline: none;
-        }
-
-        .sidebar a:hover, .sidebar a:focus-visible {
-            background-color: var(--sidebar-hover);
-            color: var(--surface);
-        }
-
-        .sidebar a.active {
-            background-color: var(--primary-blue);
-            color: white;
-            box-shadow: var(--shadow-md);
-        }
-
-        /* Main Content Area */
-        .main-content {
-            flex: 1;
-            margin-left: 260px;
-            padding: 40px;
-            max-width: 1400px;
-        }
-
-        .page-header {
-            margin-bottom: 24px;
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-end;
-            flex-wrap: wrap;
-            gap: 16px;
-        }
-
-        .page-header h1 {
-            font-size: 32px;
-            font-weight: 800;
-            color: var(--text-main);
-            letter-spacing: -0.5px;
-        }
-
-        .page-header p {
-            color: var(--text-muted);
-            font-size: 15px;
-            margin-top: 6px;
-            max-width: 700px;
-        }
-
-        /* Prominent Date Selector */
-        .date-selector-container {
-            background: var(--surface);
-            padding: 12px 20px;
-            border-radius: var(--radius-lg);
-            border: 1px solid var(--border-color);
-            box-shadow: var(--shadow-sm);
-            display: inline-flex;
-            align-items: center;
-            gap: 12px;
-        }
-
-        .date-selector-container label {
-            font-weight: 700;
-            color: var(--text-main);
-            font-size: 14px;
-        }
-
-        .date-selector-container input[type="date"] {
-            border: none;
-            background: #f1f5f9;
-            padding: 8px 12px;
-            border-radius: var(--radius-sm);
-            font-weight: 600;
-            color: var(--primary-blue);
-            cursor: pointer;
-            box-shadow: none;
-        }
-
-        /* Cards */
-        .card {
-            background: var(--surface);
-            border-radius: var(--radius-lg);
-            padding: 28px;
-            margin-bottom: 28px;
-            box-shadow: var(--shadow-md);
-            border: 1px solid rgba(226, 232, 240, 0.8);
-        }
-
-        .card-header {
-            margin-bottom: 24px;
-            border-bottom: 1px solid var(--border-color);
-            padding-bottom: 16px;
-        }
-
-        .card-title {
-            font-size: 18px;
-            font-weight: 700;
-            color: var(--text-main);
-        }
-
-        /* Forms */
-        .form-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-            gap: 20px;
-            align-items: start;
-        }
-
-        .input-group {
-            display: flex;
-            flex-direction: column;
-        }
-
-        .input-group label {
-            font-size: 13px;
-            font-weight: 600;
-            color: var(--text-main);
-            margin-bottom: 8px;
-        }
-
-        input, select {
-            width: 100%;
-            padding: 12px 16px;
-            border: 1.5px solid var(--border-color);
-            border-radius: var(--radius-sm);
-            font-size: 15px;
-            color: var(--text-main);
-            background-color: var(--surface);
-            transition: all 0.2s ease;
-            outline: none;
-            box-shadow: var(--shadow-sm);
-        }
-
-        input:hover, select:hover { border-color: var(--border-focus); }
-        input:focus, select:focus { border-color: var(--primary-blue); box-shadow: var(--focus-ring); }
-
-        /* Buttons */
-        button {
-            padding: 12px 24px;
-            border: none;
-            border-radius: var(--radius-sm);
-            font-weight: 600;
-            font-size: 14.5px;
-            cursor: pointer;
-            transition: all 0.2s ease;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            outline: none;
-        }
-        
-        button:focus-visible { box-shadow: var(--focus-ring); }
-        button:active { transform: translateY(1px); }
-
-        .btn-primary { background-color: var(--primary-blue); color: white; }
-        .btn-primary:hover { background-color: var(--primary-hover); }
-
-        /* Status & Feedback Elements */
-        .status-msg {
-            margin-top: 16px;
-            padding: 12px;
-            border-radius: var(--radius-sm);
-            font-size: 14px;
-            font-weight: 500;
-            display: none;
-        }
-        .status-success { background: var(--success-bg); color: var(--success); display: block; }
-        .status-error { background: var(--danger-bg); color: var(--danger); display: block; }
-
-        /* Badges */
-        .badge {
-            display: inline-block;
-            padding: 4px 10px;
-            border-radius: 20px;
-            font-size: 12px;
-            font-weight: 700;
-            letter-spacing: 0.3px;
-            text-transform: uppercase;
-        }
-        .badge-present { background: var(--success-bg); color: var(--success); }
-        .badge-absent { background: var(--danger-bg); color: var(--danger); }
-        .badge-half { background: var(--warning-bg); color: var(--warning); }
-
-        /* Lists */
-        .history-list {
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
-            max-height: 400px;
-            overflow-y: auto;
-            padding-right: 5px;
-        }
-
-        .history-item {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 16px 20px;
-            background-color: var(--surface);
-            border: 1px solid var(--border-color);
-            border-radius: var(--radius-md);
-            transition: background-color 0.2s;
-        }
-        
-        .history-item:hover {
-            background-color: #f8fafc;
-            border-color: #cbd5e1;
-        }
-
-        .history-info {
-            display: flex;
-            flex-direction: column;
-            gap: 6px;
-        }
-
-        .history-title { 
-            font-weight: 700; 
-            font-size: 15px; 
-            color: var(--text-main);
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-
-        .history-meta { 
-            font-size: 13px; 
-            color: var(--text-muted); 
-            font-weight: 500;
-            display: flex;
-            gap: 15px;
-            flex-wrap: wrap;
-        }
-
-        @media (max-width: 768px) {
-            body { flex-direction: column; }
-            .sidebar { 
-                width: 100%; height: auto; position: static; 
-                padding: 16px; flex-direction: row; flex-wrap: wrap; 
-                justify-content: center; gap: 10px;
-            }
-            .brand { width: 100%; text-align: center; margin-bottom: 10px; padding-bottom: 10px; }
-            .sidebar a { padding: 10px 14px; font-size: 14px; margin-bottom: 0; }
-            .main-content { margin-left: 0; padding: 20px; }
-            .history-item { flex-direction: column; align-items: flex-start; gap: 12px; }
-            .form-grid { grid-template-columns: 1fr; }
-            .page-header { flex-direction: column; align-items: flex-start; }
-        }
-    </style>
 </head>
 <body>
 
-<nav class="sidebar" aria-label="Main Navigation">
-    <div class="brand">SPARKX</div>
-    <a href="dashboard.html">🏠 Dashboard</a>
-    <a href="labour.html">👷 Labour</a>
-    <a href="attendance.html" class="active" aria-current="page">📅 Attendance</a>
-    <a href="salary.html">💰 Salary</a>
-    <a href="purchase_book.html">🛒 Purchase</a>
-    <a href="reports.html">📄 Reports</a>
-    <a href="index.html" style="margin-top: auto;">🚪 Logout</a>
-</nav>
-
-<main class="main-content">
-    <div class="page-header">
-        <div>
-            <h1>Daily Attendance</h1>
-            <p>Record worker status, overtime, and daily advances synced to the cloud.</p>
-        </div>
-        
-        <div class="date-selector-container">
-            <label for="globalAttendanceDate">Working Date:</label>
-            <input type="date" id="globalAttendanceDate" onchange="handleDateChange()" aria-label="Select global attendance date">
-        </div>
+<div class="container">
+    <div class="menu">
+        <a href="dashboard.html">🏠 Dashboard</a>
+        <a href="labour.html">👷 Labour</a>
+        <a href="attendance.html">📅 Attendance</a>
+        <a href="salary.html">💰 Salary</a>
+        <a href="purchase_book.html">🛒 Purchase Book</a>
+        <a href="reports.html">📄 Reports</a>
+        <a href="index.html">Logout</a>
     </div>
+    
+    <h1>Sparkx Welding and Fabrications Bengaluru</h1>
+    <h2>Attendance Entry (Cloud Database Sync)</h2>
 
-    <div class="card" style="border-top: 4px solid var(--primary-blue);">
-        <div class="card-header">
-            <h2 class="card-title">Record Attendance Entry</h2>
-        </div>
-        
-        <form id="attendanceForm" onsubmit="saveAttendance(event)">
-            <div class="form-grid">
-                <div class="input-group">
-                    <label for="labourSelect">Select Worker</label>
-                    <select id="labourSelect" required aria-required="true">
-                        <option value="">-- Loading Workers... --</option>
-                    </select>
-                </div>
-                
-                <div class="input-group">
-                    <label for="attendanceStatus">Status</label>
-                    <select id="attendanceStatus" onchange="toggleTimeFields()" required>
-                        <option value="Present">Present</option>
-                        <option value="Half Day">Half Day</option>
-                        <option value="Absent">Absent</option>
-                    </select>
-                </div>
+    <div class="login-box">
+        <label style="font-weight: bold; color: #0d47a1;">Attendance Date</label><br>
+        <input type="date" id="attendanceDate" onchange="renderRecentEntries()" style="font-weight: bold; font-size: 16px; border: 2px solid #0d47a1;">
+        <hr style="margin: 15px 0;">
 
-                <!-- Wrapped in a div so we can hide/show based on status easily -->
-                <div class="input-group" id="timeWrapIn">
-                    <label for="inTime">In Time</label>
-                    <input type="time" id="inTime" value="09:00">
-                </div>
+        <form id="attendanceForm">
+            <label>Select Labour</label><br>
+            <select id="labourSelect" required><option value="">-- Choose Worker --</option></select>
+            <br><br>
 
-                <div class="input-group" id="timeWrapOut">
-                    <label for="outTime">Out Time</label>
-                    <input type="time" id="outTime" value="18:00">
-                </div>
+            <label>Attendance Status</label><br>
+            <select id="attendanceStatus" onchange="toggleTimeFields()">
+                <option value="Present">Present</option>
+                <option value="Absent">Absent</option>
+            </select>
+            <br><br>
 
-                <div class="input-group" id="otWrap">
-                    <label for="otAmount">OT Amount (₹)</label>
-                    <input type="number" id="otAmount" placeholder="e.g. 200" value="0" min="0" step="any">
-                </div>
+            <div id="timeFieldsWrapper">
+                <label>In Time</label><br>
+                <select id="inTime"><option value="">-- Select In Time --</option></select>
+                <br><br>
 
-                <div class="input-group">
-                    <label for="advanceAmount">Advance Given Today (₹)</label>
-                    <input type="number" id="advanceAmount" placeholder="e.g. 500" value="0" min="0" step="any">
-                </div>
+                <label>Out Time</label><br>
+                <select id="outTime"><option value="">-- Select Out Time --</option></select>
+                <br><br>
+
+                <label>OT Amount</label><br>
+                <input type="number" id="otAmount" placeholder="₹" value="0">
+                <br><br>
             </div>
 
-            <div style="margin-top: 28px;">
-                <button type="submit" id="saveBtn" class="btn-primary">Save to Cloud Database</button>
-            </div>
-            
-            <div id="formMessage" class="status-msg" aria-live="polite"></div>
+            <label>Advance Given</label><br>
+            <input type="number" id="advanceAmount" placeholder="₹" value="0">
+            <br><br>
+
+            <button type="submit" id="saveBtn">SAVE TO CLOUD</button>
         </form>
-    </div>
 
-    <div class="card">
-        <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
-            <h2 class="card-title">Entries for <span id="displaySelectedDate">Today</span></h2>
-            <span id="syncStatusText" style="font-size: 13px; color: var(--text-muted); font-weight: 500;">Syncing...</span>
-        </div>
+        <hr style="margin: 20px 0;">
         
-        <div class="history-list" id="recentEntriesContainer" aria-live="polite">
-            <p style="color: var(--text-muted); font-style: italic; padding: 10px;">Loading cloud database records...</p>
+        <h3 id="recentTitle">Entries for this Date</h3>
+        <div id="recentEntriesContainer" style="max-height: 220px; overflow-y: auto; border: 1px solid #eee; padding: 10px; border-radius: 8px; background: #fafafa;">
+            <p style="color: gray; font-style: italic;">Loading cloud database records...</p>
         </div>
     </div>
-</main>
+</div>
 
 <script>
-// Initialize Supabase Client (Preserving exact credentials from code safety guarantees)
-const _supabase = supabase.createClient("https://fjzqscohyteznkehiqnf.supabase.co", "sb_publishable_ER-PXAe4A1vsLDYETL4BKw_G7p24kTE");
+// Cloud Database Connection Keys
+const SUPABASE_URL = "https://fjzqscohyteznkehiqnf.supabase.co"; 
+const SUPABASE_KEY = "sb_publishable_ER-PXAe4A1vsLDYETL4BKw_G7p24kTE"; 
 
-let labourList = [];
+const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-// On Page Load
-window.onload = async function() {
-    // Set default date to today
-    const today = new Date().toISOString().split('T')[0];
-    document.getElementById('globalAttendanceDate').value = today;
-    updateDisplayDateText(today);
+window.onload = function() {
+    let today = new Date();
+    let yyyy = today.getFullYear();
+    let mm = String(today.getMonth() + 1).padStart(2, '0');
+    let dd = String(today.getDate()).padStart(2, '0');
+    document.getElementById('attendanceDate').value = `${yyyy}-${mm}-${dd}`;
     
-    await fetchWorkers();
-    await fetchAttendanceForDate();
+    populateTimeDropdowns();
+    toggleTimeFields(); 
+    renderRecentEntries();
 };
 
-// Date Formatter (matches salary.html for ledger consistency)
-function normalizeDate(dateStr) {
-    if (!dateStr) return "";
-    const s = String(dateStr).trim();
-    if (s.includes('T')) return s.split('T')[0];
-    return s;
-}
+let labourList = JSON.parse(localStorage.getItem('labourList')) || [
+    { id: "1", name: "Javed", wage: 1300 }, 
+    { id: "2", name: "Arbaj", wage: 1000 }
+];
+const selectEl = document.getElementById('labourSelect');
 
-// UI: Updates the text in the "Entries for [Date]" header
-function updateDisplayDateText(dateStr) {
-    const options = { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' };
-    const dateObj = new Date(dateStr);
-    const formatted = isNaN(dateObj) ? dateStr : dateObj.toLocaleDateString('en-IN', options);
-    document.getElementById('displaySelectedDate').innerText = formatted;
-}
+selectEl.innerHTML = '<option value="">-- Choose Worker --</option>';
+labourList.forEach(w => {
+    let opt = document.createElement('option');
+    opt.value = w.id;
+    opt.textContent = w.name;
+    selectEl.appendChild(opt);
+});
 
-// Triggers when user changes the global date selector
-function handleDateChange() {
-    const selectedDate = document.getElementById('globalAttendanceDate').value;
-    updateDisplayDateText(selectedDate);
-    fetchAttendanceForDate();
+function populateTimeDropdowns() {
+    const inTimeSelect = document.getElementById('inTime');
+    const outTimeSelect = document.getElementById('outTime');
+    const periods = ["AM", "PM"];
+    const minutes = ["00", "15", "30", "45"];
     
-    // Clear status message
-    const msg = document.getElementById('formMessage');
-    msg.className = 'status-msg';
-    msg.innerText = '';
-}
+    periods.forEach(period => {
+        for (let h = 1; h <= 12; h++) {
+            minutes.forEach(m => {
+                let timeString = `${h}:${m} ${period}`;
+                let optIn = document.createElement('option');
+                optIn.value = timeString; optIn.textContent = timeString;
+                inTimeSelect.appendChild(optIn);
 
-// Toggle Time & OT inputs based on Status selection
-function toggleTimeFields() {
-    const status = document.getElementById('attendanceStatus').value;
-    const isAbsent = (status === 'Absent');
-    
-    // Visually hide or show
-    document.getElementById('timeWrapIn').style.display = isAbsent ? 'none' : 'flex';
-    document.getElementById('timeWrapOut').style.display = isAbsent ? 'none' : 'flex';
-    document.getElementById('otWrap').style.display = isAbsent ? 'none' : 'flex';
-    
-    // Reset values if absent
-    if (isAbsent) {
-        document.getElementById('inTime').value = '';
-        document.getElementById('outTime').value = '';
-        document.getElementById('otAmount').value = '0';
-    } else {
-        if(!document.getElementById('inTime').value) document.getElementById('inTime').value = '09:00';
-        if(!document.getElementById('outTime').value) document.getElementById('outTime').value = '18:00';
-    }
-}
-
-// Load Worker Dropdown
-async function fetchWorkers() {
-    try {
-        const { data: dbWorkers, error } = await _supabase.from('labours').select('*').order('name', { ascending: true });
-        
-        if (!error && dbWorkers && dbWorkers.length > 0) {
-            labourList = dbWorkers.map(w => ({
-                id: String(w.id || w.labour_id),
-                name: w.name || w.labour_name,
-                wage: parseFloat(w.wage || w.daily_wage || 0)
-            }));
+                let optOut = document.createElement('option');
+                optOut.value = timeString; optOut.textContent = timeString;
+                outTimeSelect.appendChild(optOut);
+            });
         }
-    } catch(err) {
-        console.warn("Supabase fetch failed, trying local storage", err);
-    }
-
-    // Fallback to local storage
-    if (labourList.length === 0) {
-        labourList = JSON.parse(localStorage.getItem('labourList')) || [];
-    }
-
-    const select = document.getElementById('labourSelect');
-    select.innerHTML = '<option value="">-- Choose Worker --</option>';
-    
-    labourList.forEach(worker => {
-        select.innerHTML += `<option value="${worker.id}" data-wage="${worker.wage}">${worker.name} (₹${worker.wage}/day)</option>`;
     });
 }
 
-// Fetch and display today's entries
-async function fetchAttendanceForDate() {
-    const dateStr = document.getElementById('globalAttendanceDate').value;
-    if (!dateStr) return;
-    
-    const container = document.getElementById('recentEntriesContainer');
-    document.getElementById('syncStatusText').innerText = "Syncing with cloud...";
-    document.getElementById('syncStatusText').style.color = "var(--primary-blue)";
-    
-    try {
-        const { data, error } = await _supabase
-            .from('attendance_history')
-            .select('*')
-            .eq('date', dateStr)
-            .order('created_at', { ascending: false });
-
-        if (error) throw error;
-
-        document.getElementById('syncStatusText').innerText = "Live Synced ✅";
-        document.getElementById('syncStatusText').style.color = "var(--success)";
-        renderEntriesUI(data || []);
-        
-    } catch (err) {
-        console.error("Error fetching attendance:", err);
-        container.innerHTML = `<p style="color: var(--danger); padding: 10px;">Failed to load records from cloud database.</p>`;
-        document.getElementById('syncStatusText').innerText = "Offline/Error";
-        document.getElementById('syncStatusText').style.color = "var(--danger)";
+function toggleTimeFields() {
+    const status = document.getElementById('attendanceStatus').value;
+    const wrapper = document.getElementById('timeFieldsWrapper');
+    if (status === "Absent") {
+        wrapper.style.display = "none";
+        document.getElementById('inTime').value = "";
+        document.getElementById('outTime').value = "";
+        document.getElementById('otAmount').value = "0";
+    } else {
+        wrapper.style.display = "block";
+        document.getElementById('inTime').value = "8:00 AM";
+        document.getElementById('outTime').value = "5:00 PM";
     }
 }
 
-// Render the UI for the fetched entries
-function renderEntriesUI(records) {
+async function renderRecentEntries() {
     const container = document.getElementById('recentEntriesContainer');
+    const titleEl = document.getElementById('recentTitle');
+    const selectedRawDate = document.getElementById('attendanceDate').value;
     
-    if (!records || records.length === 0) {
-        container.innerHTML = `<p style="color: var(--text-muted); font-size: 14.5px; padding: 16px;">No attendance recorded for this date yet.</p>`;
+    if(!selectedRawDate) return;
+
+    const [y, m, d] = selectedRawDate.split('-');
+    let targetDateStr = new Date(y, m - 1, d).toLocaleDateString();
+    titleEl.textContent = `Entries for ${targetDateStr}`;
+    
+    container.innerHTML = '<p style="color: gray; font-style: italic;">Fetching records from cloud...</p>';
+
+    const { data: history, error } = await _supabase
+        .from('attendance_history')
+        .select('*')
+        .eq('date', targetDateStr);
+
+    if (error) {
+        container.innerHTML = `<p style="color: red;">Cloud Error: ${error.message}</p>`;
         return;
     }
 
-    let html = '';
-    records.forEach(rec => {
-        // Resolve formatting variations safely
-        const name = rec.name || rec.worker_name || "Unknown";
-        const status = rec.status || "Present";
-        const safeStatus = status.toLowerCase();
-        
-        let badgeClass = "badge-present";
-        if (safeStatus === "absent") badgeClass = "badge-absent";
-        if (safeStatus.includes("half")) badgeClass = "badge-half";
-        
-        const ot = parseFloat(rec.otamount || rec.ot_amount || 0);
-        const adv = parseFloat(rec.advance || rec.advance_amount || 0);
-        
-        html += `
-        <div class="history-item">
-            <div class="history-info">
-                <div class="history-title">
-                    ${name} <span class="badge ${badgeClass}">${status}</span>
-                </div>
-                <div class="history-meta">
-                    ${safeStatus !== 'absent' ? `<span>⏱️ ${rec.in_time || '-'} to ${rec.out_time || '-'}</span>` : ''}
-                    ${ot > 0 ? `<span style="color: var(--primary-blue);">💰 OT: ₹${ot}</span>` : ''}
-                    ${adv > 0 ? `<span style="color: var(--warning);">💸 Adv: ₹${adv}</span>` : ''}
-                </div>
-            </div>
-        </div>`;
-    });
+    container.innerHTML = '';
+    if (!history || history.length === 0) {
+        container.innerHTML = '<p style="color: gray; font-style: italic;">No entries made for this date yet.</p>';
+        return;
+    }
     
-    container.innerHTML = html;
+    history.forEach(record => {
+        let div = document.createElement('div');
+        div.style.padding = "5px 0";
+        div.innerHTML = `
+            <p style="margin: 5px 0; font-size: 14px;"><strong>${record.name}</strong> - <span style="font-weight:bold; color:${record.status === 'Present' ? 'green' : 'red'};">${record.status}</span><br>
+            ${record.status === 'Present' ? `<small style="color: #666;">In: ${record.intime} | Out: ${record.outtime}</small><br>` : ''}
+            <small style="color:#333;">(OT: ₹${record.otamount}, Adv: ₹${record.advance})</small></p>
+            <button onclick="deleteAttendance('${record.entryid}')" style="background:#dc3545; padding: 3px 8px; font-size: 11px; width: auto; display: inline-block; margin-bottom:5px;">Delete Entry</button>
+            <hr style="margin: 5px 0; border: 0; border-top: 1px dashed #ddd;">
+        `;
+        container.appendChild(div);
+    });
 }
 
-// Handle Form Submission
-async function saveAttendance(e) {
+document.getElementById('attendanceForm').addEventListener('submit', async function(e) {
     e.preventDefault();
+    const saveBtn = document.getElementById('saveBtn');
+    if(!selectEl.value) return alert("Please select a worker first!");
     
-    const btn = document.getElementById('saveBtn');
-    const msg = document.getElementById('formMessage');
-    const originalText = btn.innerHTML;
-    
-    btn.innerHTML = "Saving...";
-    btn.disabled = true;
-    msg.className = 'status-msg';
-    
-    const dateValue = document.getElementById('globalAttendanceDate').value;
-    const select = document.getElementById('labourSelect');
-    const workerId = select.value;
-    const workerName = select.options[select.selectedIndex].text.split(' (')[0]; // Extract name without wage text
-    const currentWage = parseFloat(select.options[select.selectedIndex].getAttribute('data-wage') || 0);
-    
-    const status = document.getElementById('attendanceStatus').value;
-    const inTime = document.getElementById('inTime').value;
-    const outTime = document.getElementById('outTime').value;
-    const otAmount = parseFloat(document.getElementById('otAmount').value) || 0;
-    const advance = parseFloat(document.getElementById('advanceAmount').value) || 0;
+    saveBtn.disabled = true;
+    saveBtn.textContent = "SAVING TO CLOUD...";
 
-    // Safety Guarantee: Map to multiple potential column formats to ensure schema compatibility
-    const record = {
-        date: dateValue,
-        labourid: workerId,
-        labour_id: workerId, 
-        name: workerName,
+    let worker = labourList.find(w => w.id === selectEl.value);
+    let status = document.getElementById('attendanceStatus').value;
+    let selectedRawDate = document.getElementById('attendanceDate').value;
+    
+    const [y, m, d] = selectedRawDate.split('-');
+    let finalSavedDateStr = new Date(y, m - 1, d).toLocaleDateString();
+    
+    let record = {
+        entryid: "ATT_" + Date.now() + "_" + Math.floor(Math.random() * 1000),
+        date: finalSavedDateStr,
+        labourid: worker.id,
+        name: worker.name,
+        wageattime: worker.wage,
         status: status,
-        in_time: status === 'Absent' ? null : inTime,
-        out_time: status === 'Absent' ? null : outTime,
-        otamount: otAmount,
-        ot_amount: otAmount,
-        advance: advance,
-        advance_amount: advance,
-        wageattime: currentWage,
-        created_at: new Date().toISOString()
+        intime: status === "Present" ? document.getElementById('inTime').value : "--",
+        outtime: status === "Present" ? document.getElementById('outTime').value : "--",
+        otamount: status === "Present" ? (parseFloat(document.getElementById('otAmount').value) || 0) : 0,
+        advance: parseFloat(document.getElementById('advanceAmount').value) || 0
     };
 
-    try {
-        // Step 1: Check if an entry already exists for this worker on this date
-        const { data: existing, error: searchError } = await _supabase
+    const { error } = await _supabase.from('attendance_history').insert([record]);
+
+    if (error) {
+        alert("Failed to save to cloud: " + error.message);
+    } else {
+        alert("Attendance synced with Cloud successfully!");
+        document.getElementById('labourSelect').value = "";
+        document.getElementById('advanceAmount').value = "0";
+        toggleTimeFields(); 
+        renderRecentEntries();
+    }
+    saveBtn.disabled = false;
+    saveBtn.textContent = "SAVE TO CLOUD";
+});
+
+window.deleteAttendance = async function(targetEntryId) {
+    if (confirm("Are you sure you want to delete this attendance entry from the cloud?")) {
+        const { error } = await _supabase
             .from('attendance_history')
-            .select('id')
-            .eq('date', dateValue)
-            .eq('labourid', workerId);
-            
-        if (searchError) throw searchError;
+            .delete()
+            .eq('entryid', targetEntryId);
 
-        // Step 2: Update if exists, else Insert
-        if (existing && existing.length > 0) {
-            const { error: updateError } = await _supabase
-                .from('attendance_history')
-                .update(record)
-                .eq('id', existing[0].id);
-            if (updateError) throw updateError;
+        if (error) {
+            alert("Delete failed: " + error.message);
         } else {
-            const { error: insertError } = await _supabase
-                .from('attendance_history')
-                .insert([record]);
-            if (insertError) throw insertError;
-        }
-
-        // Success UX
-        msg.innerText = `${workerName}'s attendance saved successfully!`;
-        msg.className = 'status-msg status-success';
-        
-        // Reset specific form fields but keep date and status
-        document.getElementById('otAmount').value = '0';
-        document.getElementById('advanceAmount').value = '0';
-        select.value = ''; // Clear worker selection to prevent double submission
-        
-        // Refresh the list below
-        await fetchAttendanceForDate();
-
-    } catch (err) {
-        console.error("Save Error:", err);
-        msg.innerText = "Error saving to cloud. Please check connection.";
-        msg.className = 'status-msg status-error';
-    } finally {
-        btn.innerHTML = originalText;
-        btn.disabled = false;
-        
-        // Auto-hide success message after 3 seconds
-        if (msg.className.includes('status-success')) {
-            setTimeout(() => { msg.style.display = 'none'; }, 3000);
+            renderRecentEntries();
         }
     }
 }
 </script>
+
 </body>
 </html>
